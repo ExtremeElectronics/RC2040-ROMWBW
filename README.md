@@ -14,6 +14,7 @@ more information about the process is there.
 Copy the files from the sd-card directory to an SD card (extracting the zip)
 flash the pico with the UF2 in the root of the repository. 
 
+
 ## Buttons
 
 ### UART / Serial 
@@ -32,3 +33,5 @@ WS2812 (neopixels) untested.
 Parallel port untested.
 
 Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface
+
+![wbw-pico](https://github.com/user-attachments/assets/5eeceedb-83c8-48b5-8176-d4643b0cd4eb)
