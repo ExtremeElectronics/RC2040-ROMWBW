@@ -11,7 +11,7 @@ The RAM is more of a challenge. By Turning off ROMWBW's RAM disks we can get ava
 The image is created from ROMWBW's source and the config used RCZ80_std_pico.asm is in the Compiling-custom-ROMWBW directory
 more information about the process is there.
 
-##Notes
+## Notes
 FFS is currenty broken, although I aim to give some of this functionality back
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
 Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface
