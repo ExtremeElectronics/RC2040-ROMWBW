@@ -34,4 +34,5 @@ Parallel port untested.
 
 Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface
 
-![wbw-pico](https://github.com/user-attachments/assets/5eeceedb-83c8-48b5-8176-d4643b0cd4eb)
+
+![romwbw16-8-24](https://github.com/user-attachments/assets/60d47d1b-ad1c-487d-b0ce-a513a7ee87ff)
