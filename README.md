@@ -2,7 +2,7 @@
 The aim is Wherever possible it will be compatible with and RC2040 PCB http://extkits.co.uk/rc2040
 But as ROMWBW doesn't have the ability to start at different ROM positions the three Address select lines are currently redundent.
 
-The other issue is that ROMWBW uses bank switching to page in blocks of 16k pages. Normally using 512K or RAM and 512K of ROM. This poses a problem in a micro that has a maximum of 320K of memory. 
+The other issue is that ROMWBW uses bank switching to page in blocks of 16k pages. Normally using 512K or RAM and 512K of ROM. This poses a problem in a micro that has a maximum of 264K of memory. 
 
 The ROM has been moved into flash, this is done at startup and the whole of the rom image is copied from SD before the emulation is started. 
 The RAM is more of a challenge. By Turning off ROMWBW's RAM disks we can get avay with 256M ram. 128K in the first 8 ram banks and 32K in the last two banks where the ROMWBW HIOS sits.
