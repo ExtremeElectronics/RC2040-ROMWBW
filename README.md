@@ -40,4 +40,5 @@ Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card inte
 ## The RC2040 
 A kit of parts that lets you run this and other Z80 emulated systems is available here https://extkits.co.uk/product/rc2040/
 
-![Uploading 20220921_124314.jpg…]()
+![20220921_124314](https://github.com/user-attachments/assets/7536d248-94a7-4b19-8226-6467483e52bd)
+
