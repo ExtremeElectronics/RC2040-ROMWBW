@@ -1,4 +1,12 @@
-## RC2040 code to allow ROMWBW to run on a PI PiPico 
+# RC2040-ROMWBW code to allow ROMWBW to run on a PI PiPico 
+
+## ROMWBW
+Romwbw is a monitor and collection of Z80 programs and CPM/80 programs. ROMWBW allows a wide range of Z80 machines and peripherals to work with CPM80, Forth, Basic and other programs. 
+It is open source and available here https://github.com/wwarthen/RomWBW/tree/master 
+
+It is completly separate from this project (apart from the config file(s) in compiling-ROMWBW) as this project is only aim is to create an environment on a Pi Pico that will allow ROMWBW to run. 
+
+## RC2040-ROMWBW Pico Z80 & IDE emulator
 The aim is Wherever possible it will be compatible with and RC2040 PCB http://extkits.co.uk/rc2040
 But as ROMWBW doesn't have the ability to start at different ROM positions the three Address select lines are currently redundent.
 
