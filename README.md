@@ -58,5 +58,8 @@ A kit of parts that lets you run this and other Z80 emulated systems is availabl
 Thanks to:-
 EtchedPixels https://github.com/EtchedPixels Linux based Z80 emulation which the origional code was taken from.
 Wayne Warthen https://github.com/wwarthen  for ROMWBW
+Also
+Grant Searle, Mitch Lalovic and Spencer Owen(Rc2014)
+
 
 
