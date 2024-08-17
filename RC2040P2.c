@@ -49,6 +49,8 @@
 #include "z80dma.h"
 #include "z80dis.h"
 
+#include "malloc.h"
+
 //ide file handles
 FIL fili;
 FIL fild;
@@ -113,7 +115,6 @@ uint16_t watch= 0x0000;
 //RAMROM
 #define pagesize 0x4000 //16k pages
 #define rampages 8  //8=128K pico 
-//#define rampages 30 // 30 430K pico 2
 #define rompages 32  //32=512K all in flash
 
 //uint8_t ram[0x10000]; //64k
@@ -121,14 +122,11 @@ uint8_t ram[rampages][pagesize]; //128k
 uint8_t topram3e[pagesize]; //16k
 uint8_t topram3f[pagesize]; //16k
 
-//const uint8_t *rom = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
-//const uint8_t (*rom)[rompages][pagesize] = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
 //uint8_t rom[0x10000]; //64k
 const uint8_t *rom = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 
 //page memory registers maps registers on 512rma/512rom card
 uint8_t pmr[5]={0,0,0,0,0}; // 0x78-0x7c
-
 
 //max files for ls on SD card.
 #define MaxBinFiles 100
@@ -165,7 +163,7 @@ struct acia *acia;
 static uint8_t acia_narrow;
 
 //serial in circular buffer
-#define INBUFFERSIZE 1000
+#define INBUFFERSIZE 4096
 static char charbufferUART[INBUFFERSIZE];
 static int charinUART=0;
 static int charoutUART=0;
@@ -201,7 +199,6 @@ const uint RESETBUT =7;
 
 //LED
 const uint PCBLED =6;
-
 
 /* use stdio for errors via usb uart */
 
@@ -264,13 +261,24 @@ volatile int emulator_done;
 #define TRACE_ACIA	0x400000
 #define TRACE_BANK      0x800000 
 
-
 int trace = 0;
-//trace=TRACE_MEM + TRACE_BANK ;
 
 static void reti_event(void);
 
 static unsigned int nbytes;
+
+uint32_t getTotalHeap(void) {
+   extern char __StackLimit, __bss_end__;
+   
+   return &__StackLimit  - &__bss_end__;
+}
+
+uint32_t getFreeHeap(void) {
+   struct mallinfo m = mallinfo();
+
+   return getTotalHeap() - m.uordblks;
+}
+
 
 static void z80_vardump(void)
 {
@@ -324,10 +332,7 @@ static uint8_t mem_read0(uint16_t addr)
       r=rom[pa];
       if (trace & TRACE_ROM)  printf( "RO%04X(%04x)[%02X]\n", addr,pa, r);
    }
-//   sleep_ms(20);
-   return r;
-   
-      
+   return r;      
 }
 
 static void mem_write0(uint16_t addr, uint8_t val)
@@ -360,50 +365,12 @@ static void mem_write0(uint16_t addr, uint8_t val)
       
 }
 
-/*
-static uint8_t mem_read0(uint16_t addr)
-{
-      if(romdisable){
-          if (trace & TRACE_MEM) printf( "R%04X[%02X]\n", addr, ram[addr]);
-          return ram[addr];
-      }else{
-          if(addr<pagesize){
-            if (trace & TRACE_MEM) printf( "RE%04X[%02X]\n", addr, rom[addr]);
-            return rom[addr];
-          }else{
-              if (trace & TRACE_MEM)  printf( "R%04X[%02X]\n", addr, ram[addr]);
-            return ram[addr];
-          }
-      }     
-}
-
-static void mem_write0(uint16_t addr, uint8_t val)
-{
-
-      if(romdisable){
-          //is ALL RAM
-          if (trace & TRACE_MEM) printf( "W%04x[%02X]\n", (unsigned int) addr, (unsigned int) val);
-          ram[addr]=val;
-      }else{
-          if(addr<pagesize){
-            //Lower Mem is ROM - Write DFA
-            if (trace & TRACE_MEM) printf( "ROM FAIL WRITE %04x[%02X]\n", (unsigned int) addr, (unsigned int) val);
-          }else{
-            if (trace & TRACE_MEM) printf( "W%04x[%02X]", (unsigned int) addr, (unsigned int) val);
-            ram[addr]=val;
-          }
-      }
-}
-*/
-
-uint8_t do_mem_read(uint16_t addr, int quiet)
-{
+uint8_t do_mem_read(uint16_t addr, int quiet){
       if (watch>0 && addr==watch){        z80_vardump();      }
-	return mem_read0(addr);
+  	  return mem_read0(addr);
 }
 
-uint8_t mem_read(int unused, uint16_t addr)
-{
+uint8_t mem_read(int unused, uint16_t addr){
 	static uint8_t rstate = 0;
 	uint8_t r = do_mem_read(addr, 0);
 
@@ -426,27 +393,23 @@ uint8_t mem_read(int unused, uint16_t addr)
 	return r;
 }
 
-void mem_write(int unused, uint16_t addr, uint8_t val)
-{
+void mem_write(int unused, uint16_t addr, uint8_t val){
 	 mem_write0(addr, val);
 }
 
 
-uint8_t z80dis_byte(uint16_t addr)
-{
+uint8_t z80dis_byte(uint16_t addr){
 	uint8_t r = do_mem_read(addr, 1);
 	printf( "%02X ", r);
 	nbytes++;
 	return r;
 }
 
-uint8_t z80dis_byte_quiet(uint16_t addr)
-{
+uint8_t z80dis_byte_quiet(uint16_t addr){
 	return do_mem_read(addr, 1);
 }
 
-static void z80_trace(unsigned unused)
-{
+static void z80_trace(unsigned unused){
 	static uint32_t lastpc = -1;
 	char buf[256];
 
@@ -1563,7 +1526,6 @@ void ReadSdToFlash(FRESULT fr,const char * filename,int readsize){
           if((b & 0x3)==0){
               if(b>0x20){
                   b=0;
-           //   printf("\n");
                   printf("|");
               }else{
                   printf(".");
@@ -2261,7 +2223,7 @@ int main(int argc, char *argv[])
 	int opt;
 	int fd;
 	int romen = 1;
-	int ramonly=0; //disble rom copy 64K romfile directly to ram
+//	int ramonly=0; //disble rom copy 64K romfile directly to ram
 	
 	//char *idepath = NULL; 
 	const char * idepathi ="";
@@ -2348,7 +2310,7 @@ int main(int argc, char *argv[])
 	  romsize = iniparser_getint(ini, "ROM:romsize", 0x2000);
 
 	  // RAMonly load
-	  ramonly =iniparser_getint(ini, "ROM:ramonly", 0);
+//	  ramonly =iniparser_getint(ini, "ROM:ramonly", 0);
 
 	  // start at
 	  jpc = iniparser_getint(ini, "ROM:jumpto", 0);
@@ -2440,10 +2402,13 @@ int main(int argc, char *argv[])
         sprintf(RomTitle, "\n\r  /         Derek Woodroffe          |");PrintToSelected(RomTitle,0);
         sprintf(RomTitle, "\n\r |  O        Extreme Kits            |");PrintToSelected(RomTitle,0);
         sprintf(RomTitle, "\n\r |     Kits at extkits.uk/RC2040     |");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r |               2023                |");PrintToSelected(RomTitle,0);
+        sprintf(RomTitle, "\n\r |               2024                |");PrintToSelected(RomTitle,0);
         sprintf(RomTitle, "\n\r |___________________________________|");PrintToSelected(RomTitle,0);
         sprintf(RomTitle, "\n\r   | | | | | | | | | | | | | | | | |  \n\n\r");PrintToSelected(RomTitle,0);
 
+// memory free
+	printf("Total Heap %i\n",getTotalHeap());
+	printf("Free Heap %i\n",getFreeHeap());
 
 
 //init Emulation
@@ -2520,9 +2485,6 @@ int main(int argc, char *argv[])
 //        DumpFlashRom(0,0x4000,0);
 
 
-	//REMOVE!!!!!!!
-//	while(1);
-	
         have_ctc = 0;
         have_16x50 = 0;
 //	tstate_steps = 500;

@@ -4,11 +4,9 @@
 #include <stdint.h>
 #include <unistd.h>
 
-
 #define DEBUG 0
 //include from RC2040
 #include "RC2040P2.h"
-
 
 //serial states
 #define WAITFORSTART 0
@@ -49,7 +47,6 @@
 
 #define NOT_FOUND -1
 
-
 //cpmtools
 #include "cpmcp.c"
 #include "cpmls.c"
@@ -84,7 +81,6 @@ unsigned int Size;
 extern void DumpMemoryUSB(unsigned int FromAddr, int dumpsize);
 extern void DessembleMemoryUSB(unsigned int FromAddr, int dumpsize);
 
-
 /* Copy from Base64 chunks to RAM
  *
  *
@@ -109,10 +105,8 @@ void Base64ToMEM(int Address){
                   if (DEBUG) printf("%s\n\r",decoded_data);
                   if (DEBUG) printf("Write to %i %i %i \n",Address,chunk,decode_size);
                   for(x=0;x<decode_size;x++){
-                     //write to ram and rom
-//                     ram[Address+x+y]=decoded_data[x]; ########################################## review!!!!!
-//                     rom[Address+x+y]=decoded_data[x]; // can nolonger writ to ROM 
-                       mem_write0(Address+x+y,decoded_data[x]);
+                     //write to ram
+                     mem_write0(Address+x+y,decoded_data[x]);
                      printf("%i ",decoded_data[x]);
                   }
                   y=y+x;                     
@@ -121,13 +115,7 @@ void Base64ToMEM(int Address){
                 }
                 printf("OK:\n");
       } while (chunk>0);
-
-
 }
-
-
-
-
 
 void WaitForStart(void){
     printf("\nStart?:\n");
