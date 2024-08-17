@@ -38,11 +38,11 @@ FFS is currenty broken, although I aim to get some of this functionality back
 
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
 
-SPO256AL2 emulation is working. 
+SPO256AL2 emulation (port 0x28) is working. 
 
 WS2812 (neopixels) untested.
 
-Parallel port untested.
+Parallel port is working.
 
 Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface
 
