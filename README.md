@@ -35,9 +35,13 @@ Dump - dumps 64K ram into a Bin file on the SD and to console.
 
 ## Notes
 FFS is currenty broken, although I aim to get some of this functionality back
+
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
+
 SPO256AL2 emulation is working. 
+
 WS2812 (neopixels) untested.
+
 Parallel port untested.
 
 Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface
