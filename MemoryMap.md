@@ -1,9 +1,10 @@
+```
 -------------- RAM RC2014 512RAM/512ROM card ---------------------
 
 On power up
 0x00-0x04 = 4 pages of 16K ROM =64 K
 
-when back "mode" selected
+when bank "mode" selected
 64 Banks - 
 0x00-0x1f = 32 pages of 16K ROM =512
 0x20-0x3f = 32 pages of 16K RAM = 512
@@ -45,3 +46,4 @@ BID_COM:   131 = 4th  RAM 32k -> RAM Bank 0x26 & 0x27
 
 = 8 x 16K banks from 0x20 - 0x27  (128K)
 AND.... 2 x 16K banks from 0x3E - 0x3F (32K)
+```
