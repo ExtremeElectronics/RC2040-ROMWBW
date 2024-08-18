@@ -34,7 +34,7 @@ Dump - dumps 64K ram into a Bin file on the SD and to console.
 
 
 ## Notes
-FFS is currenty broken, although I aim to get some of this functionality back
+FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working.
 
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
 
