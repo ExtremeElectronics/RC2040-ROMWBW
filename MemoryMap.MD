@@ -36,8 +36,8 @@ BID_IMG1:  2 ROM 32K -> ROM Bank 0x04 & 0x05
 BID_IMG2:  3 ROM 32K -> ROM Bank 0x06 & 0x07
 BID_ROMD0: 4 ROM 32K -> ROM Bank 0x08 & 0x09
 BID_BIOS:  128 = 1st  RAM 32k -> RAM Bank 0x20 & 0x21
-BID_RAMD0: 255 = last RAM 32k -> RAM Bank 0x3e & 0x3f
-BID_APP0:  255 = last RAM 32k -> RAM Bank 0x3e & 0x3f
+BID_RAMD0: 255  
+BID_APP0:  255 
 BID_BUF:   128 = 1st  RAM 32k -> RAM Bank 0x20 & 0x21
 BID_AUX:   129 = 2nd  RAM 32k -> RAM Bank 0x22 & 0x23
 BID_USR:   130 = 3rd  RAM 32k -> RAM Bank 0x24 & 0x25
