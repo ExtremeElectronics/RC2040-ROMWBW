@@ -51,6 +51,8 @@
 
 #include "malloc.h"
 
+//#define FFS True
+
 //ide file handles
 FIL fili;
 FIL fild;
@@ -109,18 +111,19 @@ uint8_t pixelspallette[256][3];
 uint16_t watch= 0x0000;
 
 //flash
-//#define FLASH_TARGET_OFFSET (1536 * 1024)
 #define FLASH_TARGET_OFFSET (1024 * 1024)
 
 //RAMROM
 #define pagesize 0x4000 //16k pages
-#define rampages 8  //8=128K pico 
+#define rampages 10  //8=128K pico allows cpm 3
 #define rompages 32  //32=512K all in flash
+
+static uint8_t overridejumpers=0; //take address from ini if set in ini
 
 //uint8_t ram[0x10000]; //64k
 uint8_t ram[rampages][pagesize]; //128k
-uint8_t topram3e[pagesize]; //16k
-uint8_t topram3f[pagesize]; //16k
+//uint8_t topram3e[pagesize]; //16k
+//uint8_t topram3f[pagesize]; //16k
 
 //uint8_t rom[0x10000]; //64k
 const uint8_t *rom = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
@@ -163,7 +166,7 @@ struct acia *acia;
 static uint8_t acia_narrow;
 
 //serial in circular buffer
-#define INBUFFERSIZE 4096
+#define INBUFFERSIZE 4000
 static char charbufferUART[INBUFFERSIZE];
 static int charinUART=0;
 static int charoutUART=0;
@@ -314,8 +317,9 @@ static uint8_t mem_read0(uint16_t addr)
       }else{//if bank greater than or = to 32 its ramf
           if(bk>=0x3e){
              //special ram for wbw
-             if(bk==0x3e)r=topram3e[pa];
-             if(bk==0x3f)r=topram3f[pa];
+//             if(bk==0x3e)r=topram3e[pa];
+//             if(bk==0x3f)r=topram3f[pa];
+//             printf("[%2x-%4x]->%2x\n",bk,pa,r);
           }else{
               if(bk-32>rampages){
 		  printf("\n******* Ram bank read fail  B%02X(%04X) ********\n", bk,pa);
@@ -345,8 +349,9 @@ static void mem_write0(uint16_t addr, uint8_t val)
       if(bk>=32){ //if bank >32 its ram
          if(bk>=0x3e){
              //special ram for wbw
-             if(bk==0x3e)topram3e[pa]=val;
-             if(bk==0x3f)topram3f[pa]=val;
+//             if(bk==0x3e)topram3e[pa]=val;
+//             if(bk==0x3f)topram3f[pa]=val;
+//             printf("[%2x-%4x]<-%2x\n",bk,pa,val);
          }else{ 
             if(bk-32>rampages){
                 printf("\n******* Ram bank write fail  B%02X(%04X) ********\n", bk,pa);
@@ -1293,7 +1298,7 @@ static uint8_t io_read_2014(uint16_t addr)
 	if (addr >= 0xA0 && addr <= 0xA7 && have_16x50)
 		return uart_read(&uart[0], addr & 7);
 	else if (addr==PIOA) return PIOA_read();	
-	else if (addr==SPO256Port) return SPO256DataReady;
+	else if (addr==SPO256Port)  return SPO256DataReady;
 	else if (addr==SPO256FreqPort) return SPO256FreqPortData; 
 	else if (addr==BeepPort) return BeepDataReady;
         else if (addr>=NeoPixelPort && addr<= NeoPixelPort+7) return GetNeoData(addr-NeoPixelPort);
@@ -1324,11 +1329,7 @@ static void io_write_2014(uint16_t addr, uint8_t val, uint8_t known)
 		my_ide_write(addr & 7, val);
 	else if (addr >= 0xA0 && addr <= 0xA7 && have_16x50)
 		uart_write(&uart[0], addr & 7, val);
-	/* The switchable/pageable ROM is not very well decoded */
-//	else if (switchrom && (addr & 0x7F) >= 0x38 && (addr & 0x7F) <= 0x3F)
-//		toggle_rom();
 	else if ( (addr & 0x7F) >= 0x78 && (addr & 0x7F) <= 0x7C){
-		    //toggle_rom();
 		    uint8_t ad=(addr & 0x7F)-0x78;
 		    pmr[ad]=val; //set page register
 		    if (trace & TRACE_BANK)  printf( "BkReg %02X[%02X]\n", ad,val);
@@ -1813,19 +1814,6 @@ int GetSwitches(){
   gpio_init(HASSwitchesIO); 
   gpio_set_dir(HASSwitchesIO,GPIO_IN);
   gpio_pull_up(HASSwitchesIO);
-/*
-  gpio_init(ROMA13);
-  gpio_set_dir(ROMA13,GPIO_IN);
-  gpio_pull_up(ROMA13);
-  
-  gpio_init(ROMA14);
-  gpio_set_dir(ROMA14,GPIO_IN);
-  gpio_pull_up(ROMA14);
-  
-  gpio_init(ROMA15);
-  gpio_set_dir(ROMA15,GPIO_IN);
-  gpio_pull_up(ROMA15);
-*/
 
 //serial port selection swithch
   gpio_init(SERSEL);
@@ -1841,10 +1829,6 @@ int GetSwitches(){
   }else{
     //switches present, use values
     HasSwitches=1;
-//    rombank=0;
-//    if (gpio_get(ROMA13))rombank+=1;
-//    if (gpio_get(ROMA14))rombank+=2;
-//    if (gpio_get(ROMA15))rombank+=4;
 
     if (gpio_get(SERSEL)==1){
         UseUsb=1;
@@ -2161,7 +2145,7 @@ void DoNeo(uint8_t addr,uint8_t data){
 
 void Core1Main(void){
 
-//  printf("\n#Core 1 Starting#\n");
+  printf("\n#Core 1 Starting#\n");
 
 // init sound
     SetPWM();
@@ -2232,7 +2216,7 @@ int main(int argc, char *argv[])
 	
 	int indev;
 	char *patha = NULL, *pathb = NULL;
-	const char * romfile ="R0001009.BIN"; //default ROM image
+	const char * romfile ="XXXXXXXXXX.BIN"; //default ROM image
 //        uint16_t romsize =0x2000;
 	  uint32_t romsize = 0x80000; //512 K
         char temp[250];
@@ -2286,7 +2270,6 @@ int main(int argc, char *argv[])
         int iscf=0;
 
        	ini_name = "rc2040.ini";
-
 	
 	if (SDFileExists(ini_name)){
 	  sprintf(temp,"Ini file %s Exists Loading ... \n\r",ini_name);
@@ -2295,22 +2278,13 @@ int main(int argc, char *argv[])
 //########################################### INI Parser ######################################		
 	  ini = iniparser_load(fr, ini_name);
 	  //iniparser_dump(ini, stdout);
-
-	  //override Jumpers
-//	  overridejumpers=iniparser_getint(ini, "ROM:ovjump", 0);
 	  
-	  // ROM select from ini
-/*	  rombank=0;
-	  if (iniparser_getint(ini, "ROM:a13", 0)) rombank+=1;
-	  if (iniparser_getint(ini, "ROM:a14", 0)) rombank+=2;
-	  if (iniparser_getint(ini, "ROM:a15", 0)) rombank+=4;
-*/
+	  //override Jumpers
+          overridejumpers=iniparser_getint(ini, "ROM:ovjump", 0);
+
 	  // ROMfile from ini
 	  romfile = iniparser_getstring(ini, "ROM:romfile", romfile);
 	  romsize = iniparser_getint(ini, "ROM:romsize", 0x2000);
-
-	  // RAMonly load
-//	  ramonly =iniparser_getint(ini, "ROM:ramonly", 0);
 
 	  // start at
 	  jpc = iniparser_getint(ini, "ROM:jumpto", 0);
@@ -2363,15 +2337,13 @@ int main(int argc, char *argv[])
 //########################################### End of INI Parser ###########################
 
 
-//IF switches link present, get switches and select rom bank and UART from switches
-/*          if (overridejumpers==0){
-            rombank=GetRomSwitches();
-          }else{
-            printf("Override jumpers set in INI \n\r");
-          }  
-*/                 
-
-	GetSwitches();
+//IF switches link present, get switches and select UART from switches
+	  if (overridejumpers==0){
+	     GetSwitches();
+	  }else{
+	     printf("Override jumpers set in INI \n\r");
+	  }
+	
         }else{
             uart_puts(UART_ID,"No  \n\r");
             printf("SD INIT OK \n\r",1);
@@ -2438,25 +2410,6 @@ int main(int argc, char *argv[])
             PrintToSelected("\rSIO selected\n\r",1);
         }
         
-        //rom bank and write to rom directly removed now we have flash
-        
-        /*
-        //ram only system, hey we are emulating this, we can do ANYTHING!! 
-        if (ramonly==1){
-           // Read RAM from SD
-           ReadSdToRamrom(fr,romfile,0x10000,0x0000,USERAM);   //load 64K image to ram
-           sprintf(RomTitle,"Loading: '%s' 64K RAM only image - CPM CF File:'%s %s' \n\r",romfile,idepathi,idepath);
-           romdisable =1; //disable romswitching
-        }else{
-           // Read Rom from SD
-           ReadSdToRamrom(fr,romfile,romsize,0x2000*rombank,USEROM);   //load directly to rom
-           sprintf(RomTitle,"Loading: '%s'[rombank:%i] for 0x%X bytes \n\r",romfile,rombank,romsize);
-           PrintToSelected(RomTitle,1);
-           sprintf(RomTitle,"CPM/IDE File:'%s %s' \n\r",idepath,idepathi);
-        }
-        
-        */
-
         sprintf(RomTitle,"\nCPM/IDE 0 File:'%s' '%s' \n\r",idepath,idepathi);
         PrintToSelected(RomTitle,1);
 
@@ -2476,15 +2429,11 @@ int main(int argc, char *argv[])
         PrintToSelected(RomTitle,1);
         
         ReadSdToFlash(fr,romfile,romsize); //load directly to flash
-//        ReadSdToFlash(fr,romfile,0x1000); //load directly to flash TEST ONLY!!!
 
 //        trace=TRACE_MEM + TRACE_ROM + TRACE_BANK ;
+
 //	trace=TRACE_BANK;
-
-//        DumpMemory(0, 0x1000,0);
-//        DumpFlashRom(0,0x4000,0);
-
-
+	
         have_ctc = 0;
         have_16x50 = 0;
 //	tstate_steps = 500;
@@ -2605,7 +2554,7 @@ int main(int argc, char *argv[])
                         Z80RESET(&cpu_z80);
                         while(gpio_get(RESETBUT)==0);
                     }
-                    
+#ifdef FFS                    
                     if(gpio_get(AUXBUT)==0){
                        
                        while(gpio_get(AUXBUT)==0);
@@ -2615,7 +2564,7 @@ int main(int argc, char *argv[])
                        gpio_put(PCBLED,0);
                     
                     }
-                    
+#endif                    
                 }
 
 		for (i = 0; i < 40; i++) {  //origional
