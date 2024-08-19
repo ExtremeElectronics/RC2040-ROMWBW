@@ -36,6 +36,8 @@ Dump - dumps 64K ram into a Bin file on the SD and to console.
 ## Notes
 FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working.
 
+Dure to lack of RAM BID_BUF and BID_BIOS share the same pair of 16K pages so CP/M 3 and ZPM3 will not work together.
+
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
 
 SPO256AL2 emulation (port 0x28) is working. 
