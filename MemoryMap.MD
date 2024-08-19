@@ -1,3 +1,4 @@
+```
 -------------- RAM RC2014 512RAM/512ROM card ---------------------
 
 On power up
@@ -45,3 +46,4 @@ BID_COM:   131 = 4th  RAM 32k -> RAM Bank 0x26 & 0x27
 
 = 8 x 16K banks from 0x20 - 0x27  (128K)
 AND.... 2 x 16K banks from 0x3E - 0x3F (32K)
+```
