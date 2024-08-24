@@ -36,7 +36,7 @@ Dump - dumps 64K ram into a Bin file on the SD and to console.
 ## Notes
 FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working.
 
-With the latest ROMWBW this requirement has been removed so CP/M 3 and ZPM3 will now work.
+Inreassed bank ram so, With the latest ROMWBW CP/M 3 and ZPM3 will now work.
 
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
 
@@ -46,10 +46,9 @@ WS2812 (neopixels) untested.
 
 Parallel port is working.
 
-Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface
+Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface, the size from the id file is overwritten so 2 dissimillar sized images can be used and still report to the BIOS correctly.
 
-More information regarding the CPMIDE.id file can be found here https://github.com/ExtremeElectronics/Pico-SD--IDE-interface--for-Rc2014/tree/main/ID-File-Structure
-
+More information regarding the CPMIDE.id file can be found here https://github.com/ExtremeElectronics/Pico-SD--IDE-interface--for-Rc2014/tree/main/ID-File-Structure including programs to read/edit the important bits.
 
 ![romwbw16-8-24](https://github.com/user-attachments/assets/60d47d1b-ad1c-487d-b0ce-a513a7ee87ff)
 
