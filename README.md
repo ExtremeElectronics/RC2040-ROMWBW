@@ -25,20 +25,21 @@ flash the pico with the UF2 in the root of the repository.
 
 ## Buttons
 
-### UART / Serial 
-switch between USB serial and UART serial output. 
-
-BUT - FFS (broken)
+BUT - FFS noes nothing see Notes.
 
 Restart Z80, restarts without reloading the rom or ram from SD
 
 Dump - dumps 64K ram into a Bin file on the SD and to console.
 
+## Links
+UART / USB selection works (although debug is still via USB)
+
+A13,14,15 not needed with ROMWBW
 
 ## Notes
 FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working.
 
-Inreassed bank ram so, With the latest ROMWBW CP/M 3 and ZPM3 will now work.
+Inreased bank ram so, With the latest ROMWBW. CP/M 3 and ZPM3 will now work.
 
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
 
