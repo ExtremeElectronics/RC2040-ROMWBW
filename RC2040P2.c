@@ -1483,39 +1483,48 @@ void WriteRamromToSd(FRESULT fr,char * filename,int writesize,int readfromram){
 */
 
 //************************************************************************************************************
-//*                                    Flash! ...... Ah-ahAh-ah                                                  *
+//*                                    Flash! ...... Ah-ah!                                                  *
 //************************************************************************************************************
 
-/*
-void format_flash(uint32_t size){
-    printf("Format Flash %x\n",size);
-    uint8_t x;
-    uint32_t fto=FLASH_TARGET_OFFSET;
-    printf("Erasing flash from %x sector size %x\n",fto,FLASH_SECTOR_SIZE);    
-    while (size>0){
-        //FLASHSECTOR SIZE defined in spi_flash.c
-	printf("%x - ",fto);
-        uint32_t ints = save_and_disable_interrupts();
-        flash_range_erase(fto, FLASH_SECTOR_SIZE);
-        //flash_range_program(fto, fdata, FLASH_PAGE_SIZE);
-        restore_interrupts (ints);
-        size=size-FLASH_SECTOR_SIZE;
-        fto=fto+FLASH_SECTOR_SIZE;
+int CompareFlashToSDROM(const char * filename){
+    #define COMPSIZE 1024 
+    uint8_t buffer[COMPSIZE];	
+    FIL fil;
+    UINT br;
+    FRESULT fr;
+    uint16_t x;
+    uint8_t e=1;
+    fr = f_open(&fil, filename, FA_READ); //FA_WRITE
+    if (FR_OK != fr && FR_EXIST != fr){
+        panic("\nf_open(%s) error Compare: %s (%d)\n", filename, FRESULT_str(fr), fr);
+    }else{
+        fr = f_read(&fil, &buffer, COMPSIZE, &br);
+        for(x=0;x<COMPSIZE;x++){
+             if(buffer[x]!=rom[x])e=0;   
+        }
     }
-    printf ("\n\n");
+    f_close(&fil);
+    if(e==0)printf("Flash Rom doesn't match $s\n",filename);	
+    return e;
+    
 }
-*/
+
+
+uint32_t CksumFlash(uint32_t romsize){
+    uint32_t x;
+    uint32_t c=0;
+    for(x=0;x<romsize;x++)c+=rom[x];
+//   printf("CKSUM %i\n",c);
+    return c;
+}
 
 void ReadSdToFlash(FRESULT fr,const char * filename,int readsize){
-    //flash needs erasing first
-//    format_flash(readsize);
-    
     uint32_t fto=FLASH_TARGET_OFFSET;
     uint8_t buffer[FLASH_SECTOR_SIZE];
     FIL fil;
     fr = f_open(&fil, filename, FA_READ); //FA_WRITE
     if (FR_OK != fr && FR_EXIST != fr){
-        panic("\nf_open(%s) error: %s (%d)\n", filename, FRESULT_str(fr), fr);
+        panic("\nf_open(%s) error READ ROM : %s (%d)\n", filename, FRESULT_str(fr), fr);
     }else{
       int a,b;
       char c;
@@ -1540,7 +1549,48 @@ void ReadSdToFlash(FRESULT fr,const char * filename,int readsize){
       }    
       printf("\n");
    }
+   f_close(&fil);
+   
 }
+
+uint32_t ReadRomCsum(void){
+    uint32_t c;
+    FIL fil;
+    FRESULT fr;
+    UINT br;
+    fr = f_open(&fil, "RomCkSum", FA_READ);
+    if (FR_OK != fr && FR_EXIST != fr){
+        printf("Cant open RomCkSum %s\n",FRESULT_str(fr));
+        f_close(&fil);
+        return 0;
+    }else{
+        fr = f_read(&fil, &c, 4, &br); 
+//        printf("ChkSum on SD %i",c);
+        f_close(&fil);
+        return c;
+    }  
+}
+
+int WriteRomCsum(uint32_t c){
+    FIL fil;
+    FRESULT fr;
+    UINT br;
+    fr = f_open(&fil, "RomCkSum", FA_CREATE_ALWAYS | FA_WRITE);
+    if (FR_OK != fr ){
+        printf("Cant Write to RomCkSum %s\n",FRESULT_str(fr));
+        f_close(&fil);
+        return 0;
+    }else{  
+        fr = f_write(&fil,&c,4,&br);	
+        f_close(&fil);
+        printf("written CSum %i to SD\n",c);
+        return 1;
+    }   
+
+}
+
+
+
 
 /*
 void ReadSdToRamrom(FRESULT fr,const char * filename,int readsize,int SDoffset,int writetoram ){
@@ -1726,7 +1776,7 @@ void DumpMemory(unsigned int FromAddr, int dumpsize,FRESULT fr){
 
 // dump memory image to console and sd if fr is set
 void DumpFlashRom(unsigned int FromAddr, int dumpsize,FRESULT fr){
-  printf("\nDUMP FLASH ROM\n");
+  printf("\nDUMP FLASH (Ah-ar!) ROM\n");
   int rc=0;
   int a;
   char temp[128];
@@ -2425,10 +2475,19 @@ int main(int argc, char *argv[])
         uintptr_t end = (uintptr_t) &__flash_binary_end;
         printf( "\nBinary starts at %08x and ends at %08x, size is %08x\n", start, end, end-start);
 
-        sprintf(RomTitle,"Loading: '%s' for 0x%X bytes TO FLASH! (Ahrrrr)\n\r",romfile,romsize);
+        sprintf(RomTitle,"Checking: '%s' against FLASH! (Ahrrrr)\n\r",romfile);
         PrintToSelected(RomTitle,1);
         
-        ReadSdToFlash(fr,romfile,romsize); //load directly to flash
+// copmare flash rom with cksum on flash, and compare first 1k of romfile with flash
+// reload flash is mismatch
+        uint32_t c;
+        if ((CksumFlash(romsize)!=ReadRomCsum()) || CompareFlashToSDROM(romfile)==0){
+            printf("ROM doesn't match %s on SD reloading ROM\n",romfile);	
+            sprintf(RomTitle,"Loading: '%s' for 0x%X bytes from FLASH! (Ahrrrr)\n\r",romfile,romsize);
+	    ReadSdToFlash(fr,romfile,romsize); //load directly to flash
+	    c=CksumFlash(romsize);
+	    WriteRomCsum(c);
+        }
 
 //        trace=TRACE_MEM + TRACE_ROM + TRACE_BANK ;
 
@@ -2503,7 +2562,7 @@ int main(int argc, char *argv[])
 
 //Start Core1
         multicore_launch_core1(Core1Main);
-        printf("\n#Core 1 Started#\n\n");
+//        printf("\n#Core 1 Started#\n\n");
         
 //Init Z80
 	tc.tv_sec = 0;
@@ -2526,7 +2585,7 @@ int main(int argc, char *argv[])
 
 
 	PrintToSelected("\r\n #####################################\n\r",0);
-	PrintToSelected(" ########## RC2040P2 STARTING ##########\n\r",0);
+	PrintToSelected(" ########## RC2040P2 STARTING ########\n\r",0);
 	PrintToSelected(" #####################################\n\n\r",0);
 
 	/* This is the wrong way to do it but it's easier for the moment. We

@@ -820,7 +820,7 @@ int ide_attach(struct ide_controller *c, int drive, FIL fi,FIL fd,int iscf )
   d->identify[61]=le16(imgsize >> 16);
   d->identify[60]=le16(imgsize & 0xffff);
 
-  printf(" %4x %4x\n",d->identify[57],d->identify[58]);
+//  printf(" %4x %4x\n",d->identify[57],d->identify[58]);
     
   return 0;
 }
