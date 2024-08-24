@@ -29,7 +29,9 @@ flash the pico with the UF2 in the root of the repository.
 switch between USB serial and UART serial output. 
 
 BUT - FFS (broken)
+
 Restart Z80, restarts without reloading the rom or ram from SD
+
 Dump - dumps 64K ram into a Bin file on the SD and to console.
 
 
