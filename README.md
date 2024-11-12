@@ -58,6 +58,8 @@ More information regarding the CPMIDE.id file can be found here https://github.c
 ## The RC2040 
 A kit of parts that lets you run this and other Z80 emulated systems is available here https://extkits.co.uk/product/rc2040/
 
+And a new Kit of parts to support the frontpanel controls on the way soon... 
+
 ![20220921_124314](https://github.com/user-attachments/assets/7536d248-94a7-4b19-8226-6467483e52bd)
 
 ## Credits
