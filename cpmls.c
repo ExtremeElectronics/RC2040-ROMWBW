@@ -15,8 +15,8 @@
 #endif
 
 /* variables */ /*{{{*/
-char cbuf[22400];
-//char cbuf[11200];
+//char cbuf[22400];
+char cbuf[11200];
 
 static const char * const month[12]={"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
 

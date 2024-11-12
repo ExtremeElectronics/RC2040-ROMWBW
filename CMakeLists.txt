@@ -2,6 +2,8 @@
 #  set(PICO_PLATFORM rp2350)
   set(PICO_PLATFORM rp2040)
 
+string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
+
 #  set(picotool_DIR /usr/local/bin/picotool)
   cmake_minimum_required(VERSION 3.13)
 

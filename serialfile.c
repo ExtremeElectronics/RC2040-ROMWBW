@@ -54,7 +54,8 @@
 extern uint16_t watch;
 extern  int trace;
 
-char buffer[20*1024];
+//was 20*
+char buffer[10*1024];
 char linebuffer[1024];
 char cfilename[20];
 int state=0;
@@ -98,7 +99,7 @@ void Base64ToMEM(int Address){
               if (DEBUG) printf("Chunk:%i",chunk);
               if(chunk>0){
                   printf("Data:\n");
-                  scanf("%20000s",encbuffer);
+                  scanf("%10000s",encbuffer);
                   if (DEBUG) printf("Data:%s",encbuffer);
                   size_t decode_size = strlen(encbuffer);
                   char * decoded_data = base64_decode(encbuffer, decode_size, &decode_size);

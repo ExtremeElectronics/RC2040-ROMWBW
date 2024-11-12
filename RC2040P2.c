@@ -9,6 +9,11 @@
  *
  */
 
+//define to use RCROMWBW PCB
+
+//#define RCROMWBW 1
+
+
 #include <stdio.h>
 
 //pico headers
@@ -70,6 +75,10 @@ FIL fild1;
 #include "allophoneDefs.h"
 #define MAXALLOPHONE 64
 //sound 
+#include "sounds.c"
+uint16_t disksound_pointer=0;
+volatile uint8_t playing_disk=1; 
+uint16_t disksound_timer=0;
 //must be pins on the same slice
 #define soundIO1 15
 #define soundIO2 14
@@ -181,15 +190,29 @@ static int charoutUSB=0;
 //PIO
 int PIOA=0;
 
+#ifdef RCROMWBW
+uint8_t PIOAp[]={26,22,21,20,19,18,17,16};
+#endif
+
+#ifndef RCROMWBW
 uint8_t PIOAp[]={16,17,18,19,20,21,26,27};
+#endif
+
 
 //PICO GPIO
 // use regular LED (gpio 25 most likly)
-const uint LEDPIN = PICO_DEFAULT_LED_PIN;
 
-const uint HASSwitchesIO =22;
+#ifdef RCROMWBW
+const uint LEDPIN = 10;
+#endif
+#ifndef RCROMWBW
+const uint LEDPIN = PICO_DEFAULT_LED_PIN;
+#endif
+
+
+//const uint HASSwitchesIO =22;
 //
-int HasSwitches=0;
+//int HasSwitches=0;
 //
 
 //serial selection
@@ -1297,11 +1320,11 @@ static uint8_t io_read_2014(uint16_t addr)
 		return my_ide_read(addr & 7);
 	if (addr >= 0xA0 && addr <= 0xA7 && have_16x50)
 		return uart_read(&uart[0], addr & 7);
-	else if (addr==PIOA) return PIOA_read();	
-	else if (addr==SPO256Port)  return SPO256DataReady;
-	else if (addr==SPO256FreqPort) return SPO256FreqPortData; 
-	else if (addr==BeepPort) return BeepDataReady;
-        else if (addr>=NeoPixelPort && addr<= NeoPixelPort+7) return GetNeoData(addr-NeoPixelPort);
+	else if (addr == PIOA) return PIOA_read();	
+	else if (addr == SPO256Port)  return SPO256DataReady;
+	else if (addr == SPO256FreqPort) return SPO256FreqPortData; 
+	else if (addr == BeepPort) return BeepDataReady;
+        else if (addr >= NeoPixelPort && addr <= NeoPixelPort+7) return GetNeoData(addr-NeoPixelPort);
 	if (trace & TRACE_UNK)
 		printf( "Unknown read from port %04X\n", addr);
 	return 0x78;	/* 78 is what my actual board floats at */
@@ -1334,14 +1357,14 @@ static void io_write_2014(uint16_t addr, uint8_t val, uint8_t known)
 		    pmr[ad]=val; //set page register
 		    if (trace & TRACE_BANK)  printf( "BkReg %02X[%02X]\n", ad,val);
 		}
-	else if (addr==PIOA)PIOA_write(val);	
-	else if (addr==SPO256Port){SPO256DataOut=val;SPO256DataReady=1;}
-	else if (addr==BeepPort){BeepDataOut=val;BeepDataReady=1;}
-        else if (addr==SPO256FreqPort){SPO256FreqPortData=val;}
-	else if (addr>=NeoPixelPort && addr<= NeoPixelPort+7){
-		NeoPortAddr=(addr-NeoPixelPort)&7;
-		NeoPortData=val;
-		NeoPortDataReady=1;
+	else if (addr == PIOA)PIOA_write(val);	
+	else if (addr == SPO256Port){SPO256DataOut=val;SPO256DataReady=1;}
+	else if (addr == BeepPort){BeepDataOut=val;BeepDataReady=1;}
+        else if (addr == SPO256FreqPort){SPO256FreqPortData=val;}
+	else if (addr >= NeoPixelPort && addr<= NeoPixelPort+7){
+		NeoPortAddr = (addr-NeoPixelPort)&7;
+		NeoPortData = val;
+		NeoPortDataReady = 1;
 		}
 	else if (addr == 0xFD) {
 		trace &= 0xFF00;
@@ -1861,9 +1884,9 @@ int sdls(const char *dir,const char * search) {
 
 
 int GetSwitches(){
-  gpio_init(HASSwitchesIO); 
-  gpio_set_dir(HASSwitchesIO,GPIO_IN);
-  gpio_pull_up(HASSwitchesIO);
+//  gpio_init(HASSwitchesIO); 
+//  gpio_set_dir(HASSwitchesIO,GPIO_IN);
+//  gpio_pull_up(HASSwitchesIO);
 
 //serial port selection swithch
   gpio_init(SERSEL);
@@ -1873,13 +1896,13 @@ int GetSwitches(){
   sleep_ms(1); //wait for io to settle.
 
   int v=0;
-  if (gpio_get(HASSwitchesIO)==1){
+/*  if (gpio_get(HASSwitchesIO)==1){
     PrintToSelected("\r\nNo Switches, no settings changed \n\r",1);
     HasSwitches=0;
   }else{
     //switches present, use values
     HasSwitches=1;
-
+*/
     if (gpio_get(SERSEL)==1){
         UseUsb=1;
         PrintToSelected("Console Via USB  \n\r",1);
@@ -1887,6 +1910,7 @@ int GetSwitches(){
         UseUsb=0;
         PrintToSelected("Console Via UART \n\r",1);
     }
+
 
 
 //if has switches, then it has buttons and an LED too.
@@ -1910,7 +1934,7 @@ int GetSwitches(){
     gpio_init(PCBLED);
     gpio_set_dir(PCBLED,GPIO_OUT);
 
-  }
+//  }
 //  return rombank;
     return 0;
 }
@@ -1950,6 +1974,21 @@ void PlayAllophone(int al){
 
     }
 
+}
+
+//play disk sounds in 1/2 second chunks from a loop
+void PlayDiskSounds(void){
+   	
+   uint8_t c=floppy_disc_short[disksound_pointer];
+   disksound_pointer++;
+   if(disksound_pointer>FLOPPYDISKSOUNDLEN)disksound_pointer=0;
+   pwm_set_both_levels(PWMslice,c,c);
+   sleep_us(110); //8khz ish
+   disksound_timer++;
+   if(disksound_timer>4000){
+       playing_disk=0;
+       disksound_timer=0;
+   }
 }
 
 void PlayAllophones(uint8_t *alist,int listlength){
@@ -2203,10 +2242,15 @@ void Core1Main(void){
 //init neopixels
     init_neo();
 
-//SAY RC2040
+//RC2040
+//    uint8_t alist[] ={AR1,PA3,SS1,SS1,IY1,PA3,TT2,WH1,EH1,EH1,NN1,PA2,PA3,TT2,IY1,PA5,FF1,OR1,PA3,TT2,IY1,PA5};
 
-    uint8_t alist[] ={AR1,PA3,SS1,SS1,IY1,PA3,TT2,WH1,EH1,EH1,NN1,PA2,PA3,TT2,IY1,PA5,FF1,OR1,PA3,TT2,IY1,PA5};
+//OK
+   uint8_t alist[] ={OW1,PA3,KK1,EH1,EY1,0};
+
+
     PlayAllophones(alist,sizeof(alist));
+    sleep_ms(500);
 
     while(1){
       if(SPO256DataReady>0){
@@ -2221,6 +2265,11 @@ void Core1Main(void){
           DoNeo(NeoPortAddr,NeoPortData);
           NeoPortDataReady=0;
       }
+      //playdisk sounds triggered from sd card LED 
+      if(playing_disk){
+        PlayDiskSounds();
+      }
+
       tight_loop_contents();
   }
 }
@@ -2388,11 +2437,11 @@ int main(int argc, char *argv[])
 
 
 //IF switches link present, get switches and select UART from switches
-	  if (overridejumpers==0){
+//	  if (overridejumpers==0){
 	     GetSwitches();
-	  }else{
-	     printf("Override jumpers set in INI \n\r");
-	  }
+//	  }else{
+//	     printf("Override jumpers set in INI \n\r");
+//	  }
 	
         }else{
             uart_puts(UART_ID,"No  \n\r");
@@ -2599,7 +2648,7 @@ int main(int argc, char *argv[])
 	while (!emulator_done) {
 		int i;
 		/* 36400 T states for base RC2014 - varies for others */
-                if(HasSwitches){       
+//                if(HasSwitches){       
 	            if(gpio_get(DUMPBUT)==0){
                         DumpMemory(0,0x10000,fr);
                         while(gpio_get(DUMPBUT)==0);
@@ -2624,7 +2673,7 @@ int main(int argc, char *argv[])
                     
                     }
 #endif                    
-                }
+  //              }
 
 		for (i = 0; i < 40; i++) {  //origional
 		    int j;
