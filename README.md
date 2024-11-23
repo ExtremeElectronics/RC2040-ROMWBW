@@ -8,7 +8,7 @@ It is completly separate from this project (apart from the config file(s) in com
 
 ## RC2040-ROMWBW Pico Z80 & IDE emulator
 The aim is Wherever possible it will be compatible with and RC2040 PCB http://extkits.co.uk/rc2040
-But as ROMWBW doesn't have the ability to start at different ROM positions the three Address select lines are currently redundent.
+But as ROMWBW doesn't have the ability to start at different ROM positions the three Address select lines on the RC2040 are currently redundent.
 
 The other issue is that ROMWBW uses bank switching to page in blocks of 16k pages. Normally using 512K or RAM and 512K of ROM. This poses a problem in a micro that has a maximum of 264K of memory. 
 
@@ -18,6 +18,8 @@ The RAM is more of a challenge. By Turning off ROMWBW's RAM disks we can get ava
 The image is created from ROMWBW's source and the config used RCZ80_std_pico.asm is in the Compiling-custom-ROMWBW directory
 more information about the process is there.
 
+![Screenshot 2024-11-23 212939](https://github.com/user-attachments/assets/90fe8368-67ae-4220-b8b3-bf5141625553)
+
 ## Quick start
 Copy the files from the sd-card directory to an SD card (extracting the zip)
 flash the pico with the UF2 in the root of the repository. 
@@ -25,16 +27,16 @@ flash the pico with the UF2 in the root of the repository.
 
 ## Buttons
 
-BUT - FFS noes nothing see Notes.
+Aux/But - FFS noes nothing see Notes.
 
 Restart Z80, restarts without reloading the rom or ram from SD
 
 Dump - dumps 64K ram into a Bin file on the SD and to console.
 
-## Links
-UART / USB selection works (although debug is still via USB)
+## Links 
+UART / USB selection works (although debug is still via USB) a switch on the back of the pico WBW
 
-A13,14,15 not needed with ROMWBW
+A13,14,15 (RC2040 only) not needed with ROMWBW
 
 ## Notes
 FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working.
@@ -49,16 +51,23 @@ WS2812 (neopixels) untested.
 
 Parallel port is working.
 
-Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface, the size from the id file is overwritten so 2 dissimillar sized images can be used and still report to the BIOS correctly.
+Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card interface, the size from the id file is overwritten, so 2 dissimillar sized images can now be used and still report to the BIOS correctly.
 
 More information regarding the CPMIDE.id file can be found here https://github.com/ExtremeElectronics/Pico-SD--IDE-interface--for-Rc2014/tree/main/ID-File-Structure including programs to read/edit the important bits.
 
 ![romwbw16-8-24](https://github.com/user-attachments/assets/60d47d1b-ad1c-487d-b0ce-a513a7ee87ff)
 
+Pico-WBW PCB has a full RomWBW frontpanel with LEDS and Switches on port 0
+
+## PicoWBW
+A kit of parts to give you a full RomWBW with frontpanel switches/LEDs Sound with a built in speaker, SPO256AL2 emulation. Available at https://extkits.co.uk/product/pico-romwbw/
+
+![20241123_194524](https://github.com/user-attachments/assets/9bb83998-a8b4-4b08-9177-76e0209d4d85)
+
+
 ## The RC2040 
 A kit of parts that lets you run this and other Z80 emulated systems is available here https://extkits.co.uk/product/rc2040/
 
-And a new Kit of parts to support the frontpanel controls on the way soon... 
 
 ![20220921_124314](https://github.com/user-attachments/assets/7536d248-94a7-4b19-8226-6467483e52bd)
 
@@ -67,7 +76,7 @@ Thanks to:-
 EtchedPixels https://github.com/EtchedPixels Linux based Z80 emulation which the origional code was taken from.
 Wayne Warthen https://github.com/wwarthen  for ROMWBW
 Also
-Grant Searle, Mitch Lalovic and Spencer Owen(Rc2014)
+Grant Searle, Mitch Lalovic and Spencer Owen(RC2014)
 
 
 
