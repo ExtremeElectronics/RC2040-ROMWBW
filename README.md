@@ -13,7 +13,7 @@ But as ROMWBW doesn't have the ability to start at different ROM positions the t
 The other issue is that ROMWBW uses bank switching to page in blocks of 16k pages. Normally using 512K or RAM and 512K of ROM. This poses a problem in a micro that has a maximum of 264K of memory. 
 
 The ROM has been moved into flash, this is done at startup and the whole of the rom image is copied from SD before the emulation is started. 
-The RAM is more of a challenge. By Turning off ROMWBW's RAM disks we can get avay with 256M ram. 128K in the first 8 ram banks and 32K in the last two banks where the ROMWBW HIOS sits.
+The RAM is more of a challenge. By Turning off ROMWBW's RAM disks we can just fit this into a Pico(1)'s ram. This gives 160K in the first 10 ram banks for the emulation.
 
 The image is created from ROMWBW's source and the config used RCZ80_std_pico.asm is in the Compiling-custom-ROMWBW directory
 more information about the process is there.
