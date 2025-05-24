@@ -497,18 +497,35 @@ char getUSBcharwaiting(void){
   return c;
 }
 
-// experimental UART char in circular buffer rx via USB interrupt
-void intUARTcharwaiting(void){
-//   char c = getchar_timeout_us(0); 
-    while (uart_is_readable(UART_ID)) {
-        char c =uart_getc(UART_ID);
-        charbufferUART[charinUART]=c;
-        charinUART++;
-        if (charinUART==INBUFFERSIZE){
-            charinUART=0;
+/*
+int intUSBcharwaiting(){
+// no interrupt or waiting check so use unblocking getchar, adds to buff if available
+    char c = getchar_timeout_us(0);
+    if(c!=ENDSTDIN){;
+        charbufferUSB[charinUSB]=c;
+        charinUSB++;
+        if (charinUSB==INBUFFERSIZE){
+            charinUSB=0;
         }
     }
+    return charinUSB!=charoutUSB;
 }
+*/
+int intUSBcharwaiting(){
+// no interrupt or waiting check so use unblocking getchar, adds to buff if avai
+    int c = getchar_timeout_us(0);
+//    if(c!=ENDSTDIN){
+      if(c>=0){ // fix for SDK2 by djrose80
+        charbufferUSB[charinUSB]=(char)c;
+        charinUSB++;
+        if (charinUSB==INBUFFERSIZE){
+            charinUSB=0;
+        }
+    }
+    return charinUSB!=charoutUSB;
+}
+
+
 
 //char waiting test is inbuff=outbuffer?
 int testUARTcharwaiting(){
