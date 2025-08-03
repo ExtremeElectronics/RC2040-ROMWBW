@@ -1,0 +1,20 @@
+To compile a new set of rom and CF images clone the ROMWBW repository from here https://github.com/wwarthen/RomWBW and copy the asm file above to the /Source/HBIOS directory
+run the ROMWBW build using the guide in readme in the root of the ROMWBW repository.
+
+### note ###
+If you are using windows - in powershell - remove script errors with the powreshell command
+dir D:\RomWBW-master\Source\ -recurse | unblock-file
+
+run build.cmd
+
+wait... contiune to wait ...
+
+After selecting RCZ80 it should give an option to use RCZ80_std_pico , RCZ80_std_picoFP or RCZ80_std_pico2FP (FP is for front panel support)
+
+Run the rest of the compile and copy the files RCZ80_std_picoXXX.rom and RCZ80_std_pico_hd1k_combo.img from the BINARY directory  to the RC2040's SD card
+
+Check the RC2040.ini and ensure the settings point to the new rom and img's
+
+in an admin command prompt run Build.cmd
+
+I havent tried the other image options, but I dont see why they shouldn't work.
