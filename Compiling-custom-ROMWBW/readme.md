@@ -1,4 +1,4 @@
-To compile a new set of rom and CF images clone the ROMWBW repository from here https://github.com/wwarthen/RomWBW and copy the asm file above to the /Source/HBIOS directory
+To compile a new set of rom and CF images clone the ROMWBW repository from here https://github.com/wwarthen/RomWBW and copy the asm file above to the /Source/HBIOS/Config directory
 run the ROMWBW build using the guide in readme in the root of the ROMWBW repository.
 
 After selecting RCZ80 it should give an option to use RCZ80_std_pico or RCZ80_std_picoFP (for front panel support)
