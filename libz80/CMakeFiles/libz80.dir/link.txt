@@ -1,0 +1,2 @@
+/usr/bin/arm-none-eabi-ar qc liblibz80.a CMakeFiles/libz80.dir/z80.c.obj
+/usr/bin/arm-none-eabi-ranlib liblibz80.a
