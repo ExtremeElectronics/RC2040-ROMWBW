@@ -27,11 +27,11 @@ flash the pico with the appropriate UF2 in the Binary folder of the repository.
 
 ## Buttons
 
-Aux/But - FFS noes nothing see Notes.
+But - FFS does nothing at present see Notes.
 
 Restart Z80, restarts without reloading the rom or ram from SD
 
-Dump - dumps 64K ram into a Bin file on the SD and to console.
+Dump - dumps 0-64K ram into a Bin file on the SD and to console.
 
 ## Links 
 UART / USB selection works (although debug is still via USB) a switch on the back of the pico WBW
@@ -39,7 +39,7 @@ UART / USB selection works (although debug is still via USB) a switch on the bac
 A13,14,15 (RC2040 only) not needed with ROMWBW
 
 ## Notes
-FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working.
+FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working. (got a pico2, still not working)
 
 Inreased bank ram so, With the latest ROMWBW. CP/M 3 and ZPM3 will now work.
 
