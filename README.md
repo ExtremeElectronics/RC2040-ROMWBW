@@ -65,11 +65,6 @@ A kit of parts to give you a full RomWBW with frontpanel switches/LEDs Sound wit
 ![20241123_194524](https://github.com/user-attachments/assets/9bb83998-a8b4-4b08-9177-76e0209d4d85)
 
 
-## The RC2040 
-A kit of parts that lets you run this and other Z80 emulated systems is available here https://extkits.co.uk/product/rc2040/
-
-
-![20220921_124314](https://github.com/user-attachments/assets/7536d248-94a7-4b19-8226-6467483e52bd)
 
 ## Credits
 Thanks to:-
