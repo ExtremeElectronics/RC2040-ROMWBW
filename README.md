@@ -7,7 +7,7 @@ It is open source and available here https://github.com/wwarthen/RomWBW/tree/mas
 It is completly separate from this project (apart from the config file(s) in compiling-ROMWBW) as this project is only aim is to create an environment on a Pi Pico that will allow ROMWBW to run. 
 
 ## RC2040-ROMWBW Pico Z80 & IDE emulator
-The aim is Wherever possible it will be compatible with and RC2040 PCB http://extkits.co.uk/rc2040
+The aim is Wherever possible it will be compatible with and RC2040 PCB http://extkits.co.uk/rc2040 (Works much better with the RomWBW kit)
 But as ROMWBW doesn't have the ability to start at different ROM positions the three Address select lines on the RC2040 are currently redundent.
 
 The other issue is that ROMWBW uses bank switching to page in blocks of 16k pages. Normally using 512K or RAM and 512K of ROM. This poses a problem in a micro that has a maximum of 264K of memory. 
