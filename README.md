@@ -22,7 +22,7 @@ more information about the process is there.
 
 ## Quick start
 Copy the files from the sd-card directory to an SD card (extracting the zip)
-flash the pico with the UF2 in the root of the repository. 
+flash the pico with the appropriate UF2 in the Binary folder of the repository. 
 
 
 ## Buttons
