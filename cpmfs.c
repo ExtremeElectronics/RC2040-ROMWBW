@@ -13,9 +13,9 @@
 #include "cpmdir.h"
 #include "cpmfs.h"
 
-#include "f_util.h"
+//#include "f_util.h"
 #include "ff.h"
-#include "hw_config.h"
+//#include "hw_config.h"
 
 #include "device.h"
 

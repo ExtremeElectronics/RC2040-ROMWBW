@@ -9,9 +9,9 @@
 
 #include "device.h"
 //sd card reader
-#include "f_util.h"
+//#include "f_util.h"
 #include "ff.h"
-#include "hw_config.h"
+//#include "hw_config.h"
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>

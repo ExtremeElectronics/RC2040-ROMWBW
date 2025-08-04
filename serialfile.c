@@ -6,7 +6,7 @@
 
 #define DEBUG 0
 //include from RC2040
-#include "RC2040P2.h"
+#include "RomWBW.h"
 
 //serial states
 #define WAITFORSTART 0
