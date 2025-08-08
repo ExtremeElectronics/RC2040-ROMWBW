@@ -1,4 +1,4 @@
-# RC2040-ROMWBW code to allow ROMWBW to run on a PI PiPico 
+# RC2040-ROMWBW code to allow ROMWBW to run on a PI PiPico Or PIPico2
 
 ## ROMWBW
 Romwbw is a monitor and collection of Z80 programs and CPM/80 programs. ROMWBW allows a wide range of Z80 machines and peripherals to work with CPM80, Forth, Basic and other programs. 
@@ -15,8 +15,8 @@ The other issue is that ROMWBW uses bank switching to page in blocks of 16k page
 The ROM has been moved into flash, this is done at startup and the whole of the rom image is copied from SD before the emulation is started. 
 The RAM is more of a challenge. By Turning off ROMWBW's RAM disks we can just fit this into a Pico(1)'s ram. This gives 160K in the first 10 ram banks for the emulation.
 
-The image is created from ROMWBW's source and the config used RCZ80_std_pico.asm is in the Compiling-custom-ROMWBW directory
-more information about the process is there.
+The image is created from ROMWBW's source and the config used RCZ80_std_picoXXX.asm is in the Compiling-custom-ROMWBW directory
+more information about the process nd versions for RC2040, Pico, Pico2(2) and RomWBW kits (FP) are there.
 
 ![Screenshot 2024-11-23 212939](https://github.com/user-attachments/assets/90fe8368-67ae-4220-b8b3-bf5141625553)
 
@@ -27,7 +27,7 @@ flash the pico with the appropriate UF2 in the Binary folder of the repository.
 
 ## Buttons
 
-But - FFS does nothing at present see Notes.
+But/Aux - does nothing at present see Notes.
 
 Restart Z80, restarts without reloading the rom or ram from SD
 
@@ -36,12 +36,12 @@ Dump - dumps 0-64K ram into a Bin file on the SD and to console.
 ## Links 
 UART / USB selection works (although debug is still via USB) a switch on the back of the pico WBW
 
-A13,14,15 (RC2040 only) not needed with ROMWBW
+A13,14,15 (RC2040 only) not needed or used with ROMWBW
 
 ## Notes
-FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working. (got a pico2, still not working)
+FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working. (got a pico2, still not working :) )
 
-Inreased bank ram so, With the latest ROMWBW. CP/M 3 and ZPM3 will now work.
+Inreased bank RAM so, With the latest ROMWBW. CP/M 3 and ZPM3 will now work.
 
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
 
@@ -59,10 +59,18 @@ More information regarding the CPMIDE.id file can be found here https://github.c
 
 Pico-WBW PCB has a full RomWBW frontpanel with LEDS and Switches on port 0
 
+WBW kit works with both Pico and Pico2 (see separate uf2's in the root)
+
 ## PicoWBW
 A kit of parts to give you a full RomWBW with frontpanel switches/LEDs Sound with a built in speaker, SPO256AL2 emulation. Available at https://extkits.co.uk/product/pico-romwbw/
 
 ![20241123_194524](https://github.com/user-attachments/assets/9bb83998-a8b4-4b08-9177-76e0209d4d85)
+
+## Ports ##
+Port 0x00 is the 8 bit port, the in/out is shared with the switches/LEDs on the front panel. 
+Port 0x28 SPO256AL2 allophone port, send an allophone number to this port, or 0 to stop. Polls non-zero when busy.
+Port 0x29 Beep port, send a midi note number (1-127) to this port for a beep. 0 for off
+Port 0x2a SPO256 AL2 frequency port, 0-127 midi note sets frequency for SPO256AL-2
 
 
 
