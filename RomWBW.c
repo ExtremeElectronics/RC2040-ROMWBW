@@ -2333,9 +2333,7 @@ int main(int argc, char *argv[])
 	int opt;
 	int fd;
 	int romen = 1;
-//	int ramonly=0; //disble rom copy 64K romfile directly to ram
 	
-	//char *idepath = NULL; 
 	const char * idepathi ="";
 	const char * idepath ="";
 	const char * idepath1 ="";
@@ -2343,8 +2341,7 @@ int main(int argc, char *argv[])
 	int indev;
 	char *patha = NULL, *pathb = NULL;
 	const char * romfile ="XXXXXXXXXX.BIN"; //default ROM image
-//        uint16_t romsize =0x2000;
-	  uint32_t romsize = 0x80000; //512 K
+        uint32_t romsize = 0x80000; //512 K
         char temp[250];
 	
 	int SerialType =0; //ACIA=0 SIO=1
@@ -2375,8 +2372,6 @@ int main(int argc, char *argv[])
 
 
 // mount SD Card
-//        sd_card_t *pSD = sd_get_by_num(0);
-//        FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
         
         FATFS fs;
         FRESULT fr = f_mount(&fs, "", 1);
@@ -2511,18 +2506,33 @@ int main(int argc, char *argv[])
 
 
 //banner
-        sprintf(RomTitle, "\n\n\n");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r     ________________________________");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r    /                                |");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r   /       PICO ROMWBW on %s     |",chip);PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r  /         Derek Woodroffe          |");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r |  O        Extreme Kits            |");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r |     Kits at extkits.uk/ROMWBW     |");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r |               2025                |");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r |___________________________________|");PrintToSelected(RomTitle,0);
-        sprintf(RomTitle, "\n\r   | | | | | | | | | | | | | | | | |  \n\n\r");PrintToSelected(RomTitle,0);
-
-
+sprintf(RomTitle, "\n\n\n");PrintToSelected(RomTitle,0);                                        
+sprintf(RomTitle, "\n\r     _____    _    ____     ____   ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    |  __ \\  | |  / __ \\   / __ \\  ");PrintToSelected(RomTitle,0);                         
+sprintf(RomTitle, "\n\r    | |__| | | | | |  |_| | |  | | ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    |  ___/  | | | |   _  | |  | | ");PrintToSelected(RomTitle,0);                        
+sprintf(RomTitle, "\n\r    | |      | | | |__| | | |__| | ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    |_|      |_|  \\____/   \\____/  ");PrintToSelected(RomTitle,0);    
+sprintf(RomTitle, "\n\r     _       _   _____   _       _    ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    | |     | | |___  \\ | |     | |   ");PrintToSelected(RomTitle,0);                         
+sprintf(RomTitle, "\n\r    | |  _  | |  ___| | | |  _  | |   ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    | | | | | | |___  < | | | | | |   ");PrintToSelected(RomTitle,0);                        
+sprintf(RomTitle, "\n\r    | | | | | |  ___| | | | | | | |   ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    |_| |_| |_| |_____/ |_| |_| |_|   ");PrintToSelected(RomTitle,0);                            
+sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r   ___________________________________ ");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |  __    __    __      __           |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  | |__|  |__|  |__|    |__|          |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |                                   |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |        PICO ROMWBW on %s      |",chip);PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |         Derek Woodroffe           |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |           Extreme Kits            |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |     Kits at extkits.uk/ROMWBW     |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |  _______      2025                |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  | |_______|        eXtkits    WBW   |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r _|___________________________________|_");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r|_______________________________________| \n\n\r");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);                                                                              
 
 // memory free
 	printf("Total Heap %i\n",getTotalHeap());
@@ -2655,10 +2665,6 @@ int main(int argc, char *argv[])
 		printf( "Invalid input device %d.\n", indev);
 	}
 
-
-//Start Core1
-        multicore_launch_core1(Core1Main);
-//        printf("\n#Core 1 Started#\n\n");
         
 //Init Z80
 	tc.tv_sec = 0;
@@ -2680,9 +2686,12 @@ int main(int argc, char *argv[])
 	cpu_z80.trace = z80_trace;
 
 
-	PrintToSelected("\r\n #####################################\n\r",0);
-	PrintToSelected(" ########## RC2040P2 STARTING ########\n\r",0);
-	PrintToSelected(" #####################################\n\n\r",0);
+	PrintToSelected("\r\n #######  Pico RomWBW STARTING  ######\n\r",0);
+
+//Start Core1
+        multicore_launch_core1(Core1Main);
+//        printf("\n#Core 1 Started#\n\n");
+
 
 	/* This is the wrong way to do it but it's easier for the moment. We
 	   should track how much real time has occurred and try to keep cycle
