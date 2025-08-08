@@ -55,22 +55,25 @@ Two CF images are supported for IDE0 and IDE1 similar to the RC2014 SD Card inte
 
 More information regarding the CPMIDE.id file can be found here https://github.com/ExtremeElectronics/Pico-SD--IDE-interface--for-Rc2014/tree/main/ID-File-Structure including programs to read/edit the important bits.
 
-![romwbw16-8-24](https://github.com/user-attachments/assets/60d47d1b-ad1c-487d-b0ce-a513a7ee87ff)
+![Screenshot 2025-08-08 145805](https://github.com/user-attachments/assets/f77c70b0-3032-4bc9-b63d-40de7def95be)
+
 
 Pico-WBW PCB has a full RomWBW frontpanel with LEDS and Switches on port 0
 
 WBW kit works with both Pico and Pico2 (see separate uf2's in the root)
+
+## Ports 
+Port 0x00 is the 8 bit port, the in/out is shared with the switches/LEDs on the front panel. 
+Port 0x28 SPO256AL2 allophone port, send an allophone number to this port, or 0 to stop. Polls non-zero when busy.
+Port 0x29 Beep port, send a midi note number (1-127) to this port for a beep. 0 for off
+Port 0x2a SPO256 AL2 frequency port, 0-127 midi note sets frequency for SPO256AL-2
 
 ## PicoWBW
 A kit of parts to give you a full RomWBW with frontpanel switches/LEDs Sound with a built in speaker, SPO256AL2 emulation. Available at https://extkits.co.uk/product/pico-romwbw/
 
 ![20241123_194524](https://github.com/user-attachments/assets/9bb83998-a8b4-4b08-9177-76e0209d4d85)
 
-## Ports ##
-Port 0x00 is the 8 bit port, the in/out is shared with the switches/LEDs on the front panel. 
-Port 0x28 SPO256AL2 allophone port, send an allophone number to this port, or 0 to stop. Polls non-zero when busy.
-Port 0x29 Beep port, send a midi note number (1-127) to this port for a beep. 0 for off
-Port 0x2a SPO256 AL2 frequency port, 0-127 midi note sets frequency for SPO256AL-2
+
 
 
 
