@@ -9,9 +9,17 @@
  *
  */
 
-//define to use RCROMWBW PCB
-
+//define to use ROMWBW PCB kit
+//undefine to use RC2040 PCB kit
 #define RCROMWBW 1
+
+
+#ifdef PICO_RP2350
+//define to try FFS from AUX Button (may be broken'ish)
+//undefine to disable
+//only available on 2350 due to RAM
+#define FFS_ENABLE 1
+#endif
 
 
 #include <stdio.h>
@@ -29,12 +37,7 @@
 #include "iniparser.h"
 
 //sd card reader
-//#include "f_util.h"
 #include "ff.h"
-
-//#include "rtc.h" 
-
-//#include "hw_config.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -64,7 +67,7 @@ FIL fild;
 FIL fild1;
 
 //serial file transfer
-#include "serialfile.c"
+#include "serialfile.h"
 
 //spo256al2
 //pico SDK includes
@@ -74,6 +77,7 @@ FIL fild1;
 #include "allophones.c"
 #include "allophoneDefs.h"
 #define MAXALLOPHONE 64
+
 //sound 
 #include "sounds.c"
 uint16_t disksound_pointer=0;
@@ -145,10 +149,6 @@ const uint8_t *rom = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 //page memory registers maps registers on 512rma/512rom card
 uint8_t pmr[5]={0,0,0,0,0}; // 0x78-0x7c
 
-//max files for ls on SD card.
-#define MaxBinFiles 100
-char BinFiles[MaxBinFiles];
-
 /* use stdio for errors via usb uart */
 /* use 0=UART or 1=USB for serial comms */
 /* 3=both for init ONLY */
@@ -180,7 +180,7 @@ struct acia *acia;
 static uint8_t acia_narrow;
 
 //serial in circular buffer
-#define INBUFFERSIZE 4000
+#define INBUFFERSIZE 8000
 static char charbufferUART[INBUFFERSIZE];
 static int charinUART=0;
 static int charoutUART=0;
@@ -189,8 +189,6 @@ static int charoutUART=0;
 static char charbufferUSB[INBUFFERSIZE];
 static int charinUSB=0;
 static int charoutUSB=0;
-
-#define ENDSTDIN 0xFF //non char rx value
 
 //PIO
 int PIOA=0;
@@ -205,20 +203,14 @@ uint8_t PIOAp[]={16,17,18,19,20,21,26,27};
 
 
 //PICO GPIO
-// use regular LED (gpio 25 most likly)
-
+// use regular LED on pico if NOT WBW PCB (gpio 25 most likly)
 #ifdef RCROMWBW
-const uint LEDPIN = 10;
+const uint DISKLED = 10; //Rom WBW PCB LED
 #endif
 #ifndef RCROMWBW
-const uint LEDPIN = PICO_DEFAULT_LED_PIN;
+const uint DISKLED = PICO_DEFAULT_LED_PIN;
 #endif
 
-
-//const uint HASSwitchesIO =22;
-//
-//int HasSwitches=0;
-//
 
 //serial selection
 const uint SERSEL = 13;
@@ -229,7 +221,7 @@ const uint AUXBUT =8;
 const uint RESETBUT =7;
 
 //LED
-const uint PCBLED =6;
+const uint AUXLED =6;
 
 /* use stdio for errors via usb uart */
 
@@ -244,8 +236,6 @@ const uint PCBLED =6;
 // datasheet for information on which other pins can be used.
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
-
-//static unsigned int bankreg[4];
 
 static uint8_t switchrom = 1;
 
@@ -367,7 +357,7 @@ static uint8_t mem_read0(uint16_t addr)
    return r;      
 }
 
-static void mem_write0(uint16_t addr, uint8_t val)
+void mem_write0(uint16_t addr, uint8_t val)
 {
    uint8_t r;
    if (pmr[4]>0){
@@ -472,21 +462,6 @@ static void z80_trace(unsigned unused){
 
 // experimental usb char in circular buffer
 
-
-/*
-int intUSBcharwaiting(){
-// no interrupt or waiting check so use unblocking getchar, adds to buff if available
-    char c = getchar_timeout_us(0); 
-    if(c!=ENDSTDIN){;
-        charbufferUSB[charinUSB]=c;
-        charinUSB++;
-        if (charinUSB==INBUFFERSIZE){
-            charinUSB=0;
-        }
-    }
-    return charinUSB!=charoutUSB;
-}
-*/
 int intUSBcharwaiting(){
 // no interrupt or waiting check so use unblocking getchar, adds to buff if avai
     int c = getchar_timeout_us(0);
@@ -1473,16 +1448,25 @@ void init_pico_uart(void){
 
 
 void setup_led(void){
-  gpio_init(LEDPIN);
-  gpio_set_dir(LEDPIN, GPIO_OUT);
+  gpio_init(DISKLED);
+  gpio_set_dir(DISKLED, GPIO_OUT);
+
+  gpio_init(AUXLED);
+  gpio_set_dir(AUXLED, GPIO_OUT);
+  
+  gpio_init(PICO_DEFAULT_LED_PIN);
+  gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+  
 }
 
 
 void flash_led(int t){
-  //flash LED
-  gpio_put(LEDPIN, 1);
+  //flash LED and PCB led
+  gpio_put(DISKLED, 1);
+  gpio_put(PICO_DEFAULT_LED_PIN,1);
   sleep_ms(t);
-  gpio_put(LEDPIN, 0);
+  gpio_put(DISKLED, 0);
+  gpio_put(PICO_DEFAULT_LED_PIN,0);
   sleep_ms(t);
 
 }
@@ -1855,60 +1839,6 @@ void DumpFlashRom(unsigned int FromAddr, int dumpsize,FRESULT fr){
 
 
 
-int sdls(const char *dir,const char * search) {
-    int filecnt=0;
-    char cwdbuf[FF_LFN_BUF] = {0};
-    FRESULT fr; /* Return value */
-    char const *p_dir;
-    if (dir[0]) {
-        p_dir = dir;
-    } else {
-        fr = f_getcwd(cwdbuf, sizeof cwdbuf);
-        if (FR_OK != fr) {
-            printf("f_getcwd error: (%d)\n",  fr);
-            return 0;
-        }
-        p_dir = cwdbuf;
-    }
-    printf("%s files %s\n",search, p_dir);
-    DIR dj;      /* Directory object */
-    FILINFO fno; /* File information */
-    memset(&dj, 0, sizeof dj);
-    memset(&fno, 0, sizeof fno);
-    fr = f_findfirst(&dj, &fno, p_dir, search);
-    if (FR_OK != fr) {
-        printf("f_findfirst error: (%d)\n",  fr);
-        return 0;
-    }
-    while (fr == FR_OK && fno.fname[0]) { /* Repeat while an item is found */
-        /* Create a string that includes the file name, the file size and the
-         attributes string. */
-        const char *pcWritableFile = "writable file",
-                   *pcReadOnlyFile = "read only file",
-                   *pcDirectory = "directory";
-        const char *pcAttrib;
-        /* Point pcAttrib to a string that describes the file. */
-        if (fno.fattrib & AM_DIR) {
-            pcAttrib = pcDirectory;
-        } else if (fno.fattrib & AM_RDO) {
-            pcAttrib = pcReadOnlyFile;
-        } else {
-            pcAttrib = pcWritableFile;
-        }
-        /* Create a string that includes the file name, the file size and the
-         attributes string. */
-        printf("%i) %s [%s] [size=%llu]\n", filecnt+1, fno.fname, pcAttrib, fno.fsize);
-        if (filecnt<MaxBinFiles){
-          sprintf(&BinFiles[filecnt],"%s",fno.fname);
-          filecnt++;
-        }
-        fr = f_findnext(&dj, &fno); /* Search for next item */
-    }
-    f_closedir(&dj);
-    return filecnt++;
-}
-
-
 int GetSwitches(){
 //  gpio_init(HASSwitchesIO); 
 //  gpio_set_dir(HASSwitchesIO,GPIO_IN);
@@ -1957,8 +1887,9 @@ int GetSwitches(){
     gpio_pull_up(AUXBUT);
 
 //setup PCBLED
-    gpio_init(PCBLED);
-    gpio_set_dir(PCBLED,GPIO_OUT);
+// done in led init now
+//    gpio_init(PCBLED);
+//    gpio_set_dir(PCBLED,GPIO_OUT);
 
 //  }
 //  return rombank;
@@ -2004,7 +1935,7 @@ void PlayAllophone(int al){
 
 //play disk sounds in 1/2 second chunks from a loop
 void PlayDiskSounds(void){
-   gpio_put(LEDPIN,1);	
+   gpio_put(DISKLED,1);	
    uint8_t c=floppy_disc_short[disksound_pointer];
    disksound_pointer++;
    if(disksound_pointer>FLOPPYDISKSOUNDLEN)disksound_pointer=0;
@@ -2013,7 +1944,7 @@ void PlayDiskSounds(void){
    disksound_timer++;
    if(disksound_timer>4000){
        playing_disk=0;
-       gpio_put(LEDPIN,0);
+       gpio_put(DISKLED,0);
        disksound_timer=0;
    }
 }
@@ -2326,7 +2257,7 @@ void Core1Main(void){
 
 
 
-int main(int argc, char *argv[])
+void main(void)
 {
 	static struct timespec tc;
 		
@@ -2379,7 +2310,7 @@ int main(int argc, char *argv[])
         if (FR_OK != fr){
             // panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
             sleep_ms(3000); // wait for USB
-            gpio_put(LEDPIN, 1); // SET LED PIN ON as a subtle hint.
+            gpio_put(DISKLED, 1); // SET LED PIN ON as a subtle hint.
             printf("SD INIT FAIL  \n\r");
             uart_puts(UART_ID, "SD INIT FAIL\n\r");
             sleep_ms(1000);
@@ -2387,7 +2318,6 @@ int main(int argc, char *argv[])
         }
 	printf("SD INIT OK  \n\r");
         uart_puts(UART_ID, "SD INIT OK \n\r");
-//        PrintToSelected("SD INIT OK \n\r",1);
 
 // inifile parse
 	dictionary * ini ;
@@ -2506,19 +2436,19 @@ int main(int argc, char *argv[])
 
 
 //banner
-sprintf(RomTitle, "\n\n\n");PrintToSelected(RomTitle,0);                                        
-sprintf(RomTitle, "\n\r     _____    _    ____     ____   ");PrintToSelected(RomTitle,0);                       
-sprintf(RomTitle, "\n\r    |  __ \\  | |  / __ \\   / __ \\  ");PrintToSelected(RomTitle,0);                         
-sprintf(RomTitle, "\n\r    | |__| | | | | |  |_| | |  | | ");PrintToSelected(RomTitle,0);                       
-sprintf(RomTitle, "\n\r    |  ___/  | | | |   _  | |  | | ");PrintToSelected(RomTitle,0);                        
-sprintf(RomTitle, "\n\r    | |      | | | |__| | | |__| | ");PrintToSelected(RomTitle,0);                       
-sprintf(RomTitle, "\n\r    |_|      |_|  \\____/   \\____/  ");PrintToSelected(RomTitle,0);    
+sprintf(RomTitle, "\n\r\n\r");PrintToSelected(RomTitle,0);                                        
+sprintf(RomTitle, "\n\r     _____    _     ____     ____   ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    |  __ \\  | |   / __ \\   / __ \\  ");PrintToSelected(RomTitle,0);                         
+sprintf(RomTitle, "\n\r    | |__| | | |  | |  |_| | |  | | ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    |  ___/  | |  | |   _  | |  | | ");PrintToSelected(RomTitle,0);                        
+sprintf(RomTitle, "\n\r    | |      | |  | |__| | | |__| | ");PrintToSelected(RomTitle,0);                       
+sprintf(RomTitle, "\n\r    |_|      |_|   \\____/   \\____/  ");PrintToSelected(RomTitle,0);    
 sprintf(RomTitle, "\n\r     _       _   _____   _       _    ");PrintToSelected(RomTitle,0);                       
-sprintf(RomTitle, "\n\r    | |     | | |___  \\ | |     | |   ");PrintToSelected(RomTitle,0);                         
+sprintf(RomTitle, "\n\r    | |     | | (___  \\ | |     | |   ");PrintToSelected(RomTitle,0);                         
 sprintf(RomTitle, "\n\r    | |  _  | |  ___| | | |  _  | |   ");PrintToSelected(RomTitle,0);                       
-sprintf(RomTitle, "\n\r    | | | | | | |___  < | | | | | |   ");PrintToSelected(RomTitle,0);                        
+sprintf(RomTitle, "\n\r    | | | | | | (___ (  | | | | | |   ");PrintToSelected(RomTitle,0);                        
 sprintf(RomTitle, "\n\r    | | | | | |  ___| | | | | | | |   ");PrintToSelected(RomTitle,0);                       
-sprintf(RomTitle, "\n\r    |_| |_| |_| |_____/ |_| |_| |_|   ");PrintToSelected(RomTitle,0);                            
+sprintf(RomTitle, "\n\r    |_| |_| |_| (_____/ |_| |_| |_|   ");PrintToSelected(RomTitle,0);                            
 sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r   ___________________________________ ");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r  |  __    __    __      __           |");PrintToSelected(RomTitle,0);
@@ -2531,7 +2461,7 @@ sprintf(RomTitle, "\n\r  |     Kits at extkits.uk/ROMWBW     |");PrintToSelected
 sprintf(RomTitle, "\n\r  |  _______      2025                |");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r  | |_______|        eXtkits    WBW   |");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r _|___________________________________|_");PrintToSelected(RomTitle,0);
-sprintf(RomTitle, "\n\r|_______________________________________| \n\n\r");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r|_______________________________________| \n\r\n\r");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);                                                                              
 
 // memory free
@@ -2718,17 +2648,19 @@ sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);
                         Z80RESET(&cpu_z80);
                         while(gpio_get(RESETBUT)==0);
                     }
-#ifdef FFS                    
                     if(gpio_get(AUXBUT)==0){
-                       
+                       gpio_put(AUXLED,1);                       
                        while(gpio_get(AUXBUT)==0);
                        sleep_ms(100);
-                       gpio_put(PCBLED,1);
+#ifdef FFS_ENABLE                    
                        serialfile();
-                       gpio_put(PCBLED,0);
+#endif                    
+#ifndef FFS_ENABLE
+  		      PrintToSelected("\r\n #######  Sorry FFS not compiled in  ######\n\r",0);
+#endif
+                       gpio_put(AUXLED,0);
                     
                     }
-#endif                    
   //              }
 
 		for (i = 0; i < 40; i++) {  //origional
