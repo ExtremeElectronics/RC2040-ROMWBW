@@ -38,9 +38,13 @@ UART / USB selection works (although debug is still via USB) a switch on the bac
 
 A13,14,15 (RC2040 only) not needed or used with ROMWBW
 
-## Notes
+## FFS (Fast File Serial) - RP20350(only)
 FFS currenty only works on the RP20350, cpm tools needs 64K and in a pico(1) there just isn't enough space.
+more details at https://github.com/ExtremeElectronics/RC20XX-file-transfer-programs
+Only the first 4 slices on IDE0 are accessible.
+Very untested at the moment.
 
+## Notes
 Inreased bank RAM so, With the latest ROMWBW. CP/M 3 and ZPM3 will now work.
 
 There is a new RC2040.ini file ROM and disk images for ROMWBW in the sd-card directory.
