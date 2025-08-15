@@ -39,7 +39,7 @@ UART / USB selection works (although debug is still via USB) a switch on the bac
 A13,14,15 (RC2040 only) not needed or used with ROMWBW
 
 ## Notes
-FFS is currenty broken, cpm tools needs 64K and in a pico(1) there just isnt enough space. Ill need a Pico2 to get this working. (got a pico2, still not working :) )
+FFS currenty only works on the RP20350, cpm tools needs 64K and in a pico(1) there just isn't enough space.
 
 Inreased bank RAM so, With the latest ROMWBW. CP/M 3 and ZPM3 will now work.
 
