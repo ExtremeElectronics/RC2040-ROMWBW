@@ -2,7 +2,7 @@ hd512_combo.img needs to be uncompressed
 See Compiling-custom-ROMWBW directory for more info on compiling rom and img files from ROMWBW
 
 .id file give the structure of the disks
-disdefs is used for FFS(currently not working)
+disdefs is used for FFS(currently working on RP2350 only, not well tested)
 The .rom file is the ROMWBW ROM image
 The .img file is the combined CPM disks 
 
