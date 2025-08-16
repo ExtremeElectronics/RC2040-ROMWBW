@@ -9,9 +9,13 @@ RC2040.ini specifies the emulation options open the ini for more info
 An example to get you started is downloadable above. 
 
 Along with your rc2040ini files you will need in the root of the SD card 
+
 a CPMIDE.id file
+
 at least one .img file
+
 one .rom file
+
 a diskdefs file
 
 ## CPMIDE.id 
