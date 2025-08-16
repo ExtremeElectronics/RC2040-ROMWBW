@@ -9,3 +9,5 @@ YOU MUST use the associated CPMIDE.id file and disdefs that match the format of 
 
 You can't use two disks with different formats at the same time.
 
+## Note
+The 1k image format gives issues with bigger disks. e.g the 1k_combo.img disk. 
