@@ -1,17 +1,38 @@
-hd512_combo.img needs to be uncompressed
-See Compiling-custom-ROMWBW directory for more info on compiling rom and img files from ROMWBW
+For RomWBW to run you need an SD card with a few files.
 
-.id file gives the structure of the disk drives
-disdefs is used for FFS(currently working on RP2350 only, not well tested)
-The .rom file is the ROMWBW ROM image
-The .img file is the combined CPM disks 
-
+## RC2040.ini
+The rc2040.ini file is the key to telling the system what rom, disks and formats you are using. 
+It is structured as a classic ini file. 
+Any line starting with a hash is not read.
 RC2040.ini specifies the emulation options open the ini for more info
 
-### Front panel support
-if you swap out the rom for RCZ80_std_picoFP.rom you will get support for the front panel switches and LEDs
-if you have a pico2 swapout the rom for RCZ80_std_pico2FP.rom to get more memory, and ram disks
+An example to get you started is downloadable above. 
 
-Don't forget to update the RC2040.ini to reflect the new rom filenames. 
+Along with your rc2040ini files you will need in the root of the SD card 
+a CPMIDE.id file
+at least one .img file
+one .rom file
+a diskdefs file
 
-As the port is shared in and out the switches need to connect to the port via 1K resistors, so as not to damage the pico's outputs. 
+## CPMIDE.id 
+You will also need a CPMIDE.id file
+This gives you the format of your disk drives. 
+Currently there are two formats 512 and 1k
+
+## .img file
+These are the content of your disks. you can have up to two disks loaded, but they MUST be the same format (1k or 512) and the MUST match the COMIDE.id file and diskdefs file.
+See Compiling-custom-ROMWBW directory for more info on compiling img files for ROMWBW
+
+## .rom file
+This is the ROM for your system. This will automatically be loaded if the checksum of the rom in the Pico does not match the rom on the SD card. 
+If you need to force this to happen, delete the autocreated file RomCkSum from the SD card.
+There are thre rom files one for a Pico on a RC2040 kit - RCZ80_std_pico.rom
+one for a Pico on a RomWBW kit - RCZ80_std_picoFP.rom and
+one for a Pico2 on a RomWBW kit - RCZ80_std_pico2FP.rom
+
+See Compiling-custom-ROMWBW directory for more info on compiling rom files for ROMWBW
+
+### Note 
+Don't forget to update the RC2040.ini to reflect the new rom or img filenames. 
+
+
