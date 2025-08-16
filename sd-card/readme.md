@@ -6,15 +6,17 @@ It is structured as a classic ini file.
 Any line starting with a hash is not read.
 RC2040.ini specifies the emulation options open the ini for more info
 
-An example to get you started is downloadable above. 
+An example to get you started is above. 
 
-Along with your rc2040ini files you will need in the root of the SD card 
+Along with your rc2040ini file you will need in the root of the SD card 
 
 a CPMIDE.id file
 
 at least one .img file
 
 one .rom file
+
+These must all be refenenced by the RC2040.ini file to work correctly. 
 
 a diskdefs file
 
