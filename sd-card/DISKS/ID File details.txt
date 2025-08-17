@@ -1,4 +1,10 @@
-## 512 ID file
+CPMIDE.id files give the disk geometry to the disk image files. 
+
+There are two formats used to match the ROM WBW formats hd512 and hd1k. They differ only in the number of "fixed" cylindars
+
+In the Support programs folder, there are python tools to read and write these CPMIDE.id files
+
+## hd512 ID file
 
 Magic: 1DED15C0
 0x200  Config/ID: 0x8040 32832
@@ -22,7 +28,7 @@ Magic: 1DED15C0
 0x272  Current capacity in Sectors: 0x18600 99840
 0x278  Current accessible Sectors: 0x18600 99840
 
-## 1K ID file
+## hd1K ID file
 
 Magic: 1DED15C0
 0x200  Config/ID: 0x8040 32832
