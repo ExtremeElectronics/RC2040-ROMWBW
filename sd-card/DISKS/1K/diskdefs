@@ -1,10 +1,9 @@
 # RomWBW hd1k disk definitions
-# First 8 slices of RomWBW hd1k disk image format
-# Offset of any slice (in tracks) = 128 + (1024 * <slice_num>)
+# First 4 slices of RomWBW hd1k disk image format
+# Offset of any slice (in sectors) = 128 + (1024 * <slice_num>) *16
 # WARNING: RomWBW drive letters are not fixed.  The letters below
 #          indicate the relative slice within the disk image,
 #          not the CP/M drive letter.
-# skew removed 2024-07-22
 
 # hd1k Slice 0
 diskdef rc2040imga
@@ -14,7 +13,7 @@ diskdef rc2040imga
   blocksize 4096
   maxdir 1024
   boottrk 2
-  offset 128T
+  offset 2048sec
   os 2.2
 end
 
@@ -26,7 +25,7 @@ diskdef rc2040imgb
   blocksize 4096
   maxdir 1024
   boottrk 2
-  offset 1152T
+  offset 18432sec
   os 2.2
 end
 
@@ -38,7 +37,7 @@ diskdef rc2040imgc
   blocksize 4096
   maxdir 1024
   boottrk 2
-  offset 2176T
+  offset 34816sec
   os 2.2
 end
 
@@ -50,54 +49,7 @@ diskdef rc2040imgd
   blocksize 4096
   maxdir 1024
   boottrk 2
-  offset 3200T
+  offset 51200sec
   os 2.2
 end
 
-# hd1k Slice 4
-diskdef rc2040imge
-  seclen 512
-  tracks 1024
-  sectrk 16
-  blocksize 4096
-  maxdir 1024
-  boottrk 2
-  offset 4224T
-  os 2.2
-end
-
-# hd1k Slice 5
-diskdef rc2040imgf
-  seclen 512
-  tracks 1024
-  sectrk 16
-  blocksize 4096
-  maxdir 1024
-  boottrk 2
-  offset 5248T
-  os 2.2
-end
-
-# hd1k Slice 6
-diskdef rc2040imgg
-  seclen 512
-  tracks 1024
-  sectrk 16
-  blocksize 4096
-  maxdir 1024
-  boottrk 2
-  offset 6272T
-  os 2.2
-end
-
-# hd1k Slice 7
-diskdef rc2040imgh
-  seclen 512
-  tracks 1024
-  sectrk 16
-  blocksize 4096
-  maxdir 1024
-  boottrk 2
-  offset 7296T
-  os 2.2
-end
