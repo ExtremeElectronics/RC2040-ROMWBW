@@ -1,10 +1,11 @@
 #include <string.h>
 #include <ctype.h>
-#include "base64endecode.c"
+#include "base64endecode.h"
 #include <stdint.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#define DEBUG 0
 //include from RC2040
 #include "RomWBW.h"
 
@@ -15,6 +16,7 @@
 #define WAITFORFN 3
 #define WAITFORADDRESS 4
 #define CHECK 5
+#define INNUMERATE 6
 
 //#define RECEIVEDATA 5
 #define DODATA 6
@@ -25,8 +27,9 @@
 #define EXIT 99
 
 //drives
-#define DRIVEMAX 'P'
+//#define DRIVEMAX 'P'
 #define DRIVEMIN 'A'
+char drivemax='P';
 
 //commands
 #define CMDNONE 0
@@ -40,6 +43,7 @@
 #define CMDDUMP 8
 #define CMDDISSEMBLE 9
 #define CMDPROGRAM 10
+#define CMDINNUMERATE 11
 
 //tokens
 #define StartToken "&&&-magic-XXX"
@@ -48,15 +52,15 @@
 #define NOT_FOUND -1
 
 //cpmtools
-#include "cpmcp.c"
-#include "cpmls.c"
+//#include "cpmcp.c"
+//#include "cpmls.c"
+#include "cpmfs.h"
 
 extern uint16_t watch;
 extern  int trace;
 
-//was 20*
-char buffer[10*1024];
-char linebuffer[1024];
+char buffer[20*1024];
+char linebuffer[1050];
 char cfilename[20];
 int state=0;
 int oldstate=-1;
@@ -67,7 +71,8 @@ struct cpmSuperBlock drive;
 char format[40];
 char *devopts=NULL;
 
-struct cpmInode root;
+struct cpmInode root
+;
 char **gargv;
 int gargc;
 static char starlit[2]="*";
@@ -157,7 +162,7 @@ void WaitForCMD(void){
         state=TEST;
     }
     if (strcmp(linebuffer,"WHO")==0){
-        printf("\nRC2040\n\n");
+        printf("\nRomWBW\n\n");
         state=WAITFORSTART;
         scmd=CMDNONE;
     }
@@ -183,6 +188,37 @@ void WaitForCMD(void){
         scmd=CMDDISSEMBLE;
     }
 
+    if (strcmp(linebuffer,"INNUMERATE")==0){
+        FIL fil;       
+        char line[100]; 
+        char ddef[8]="diskdef ";
+        FRESULT fr;     
+        uint8_t dcnt=0;
+    
+
+        //open disk defs
+        fr = f_open(&fil, "diskdefs", FA_READ);
+        if (fr==FR_OK){ 
+
+        while (f_gets(line, sizeof line, &fil)) {
+            //does line contain "diskdef "
+            if(strncmp(ddef,line,8)==0) dcnt++;
+        }
+        //set drivemax
+        drivemax=64+dcnt;
+        
+        printf("\n%c OK\n",drivemax);
+        
+    }else {
+         printf( "\n0 OK\n");
+    }  
+
+    f_close(&fil);
+
+        scmd=CMDNONE;
+        state=WAITFORSTART;
+    }
+
     if (strcmp(linebuffer,"EXIT")==0){
         scmd=EXIT;
         state=EXIT;
@@ -197,7 +233,7 @@ void WaitForDrive(void){
     scanf("%1024s", linebuffer);
     linebuffer[0]=toupper(linebuffer[0]);
     if (DEBUG)   printf("%s\n",linebuffer);
-    if (linebuffer[0]>=DRIVEMIN && linebuffer[0]<=DRIVEMAX){
+    if (linebuffer[0]>=DRIVEMIN && linebuffer[0]<=drivemax){
         drivel=linebuffer[0];
         if (scmd==CMDLS){
             state=CHECK;
@@ -293,6 +329,7 @@ void Check(void){
         if(scmd==CMDDUMP) state=DODATA;
         if(scmd==CMDDISSEMBLE) state=DODATA;
         if(scmd==CMDPROGRAM) state=DODATA;        
+        if(scmd==CMDINNUMERATE) state=DODATA;
     }else{
         printf("ERROR: %s\n",serr);
         state=WAITFORSTART;
@@ -398,7 +435,9 @@ void DoData(void){
         sprintf(file,"%s",cfilename);
  
         sprintf(filearg,"%s",cfilename);
-        cpmglob(0,1,fargc-1,&root,&gargc,&gargv);
+        
+//        cpmglob(0,1,fargc-1,&root,&gargc,&gargv);
+        cpmglob(0,1,fargc,&root,&gargc,&gargv);
       
         if (DEBUG) printf("CPM GLOB\n");
 
@@ -468,6 +507,8 @@ void DoData(void){
     scmd=CMDNONE;
 
   }
+
+//Innumerate
   
 //Disemble  
   if(scmd==CMDDISSEMBLE){

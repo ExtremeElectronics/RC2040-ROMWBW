@@ -12,6 +12,7 @@
 
 #include "cpmdir.h"
 #include "cpmfs.h"
+#include "base64endecode.h"
 
 //#include "f_util.h"
 #include "ff.h"

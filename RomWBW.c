@@ -21,7 +21,6 @@
 #define FFS_ENABLE 1
 #endif
 
-
 #include <stdio.h>
 
 //pico headers
@@ -129,7 +128,7 @@ uint16_t watch= 0x0000;
 //RAMROM
 #ifdef PICO_RP2350
   #define pagesize 0x4000 //16k pages
-  #define rampages 24  //16=262K pico allows cpm 3
+  #define rampages 20  //20=320K pico allows cpm 3
   #define rompages 32  //32=512K all in flash
 #endif
 
@@ -333,12 +332,9 @@ static uint8_t mem_read0(uint16_t addr)
             if (trace & TRACE_ROM)  printf( "RO%04X[%02X]\n", addr, r);
           
       }else{//if bank greater than or = to 32 its ramf
-          if(bk>=0x3e){
-             //special ram for wbw
-//             if(bk==0x3e)r=topram3e[pa];
-//             if(bk==0x3f)r=topram3f[pa];
-//             printf("[%2x-%4x]->%2x\n",bk,pa,r);
-          }else{
+//          if(bk>=0x3e){
+
+//          }else{
               if(bk-32>rampages){
 		  printf("\n******* Ram bank read fail  B%02X(%04X) ********\n", bk,pa);
 		     r=0;
@@ -347,10 +343,9 @@ static uint8_t mem_read0(uint16_t addr)
 		     if (trace & TRACE_BANK)  printf( "B%02X(%04X)-", bk,pa);
 		     if (trace & TRACE_MEM)  printf( "RA%04X[%02X]\n", addr, r);
               }
-          }
+//          }
       }
    }else{ //not banked, all point to bank 0 (rom)
-      // r=(*rom)[0][pa];
       r=rom[pa];
       if (trace & TRACE_ROM)  printf( "RO%04X(%04x)[%02X]\n", addr,pa, r);
    }
@@ -365,12 +360,8 @@ void mem_write0(uint16_t addr, uint8_t val)
       uint16_t pa=addr & 0x3fff;  //bottom 14 lines select address within that bank
       uint8_t bk=pmr[pn]; // get bank number
       if(bk>=32){ //if bank >32 its ram
-         if(bk>=0x3e){
-             //special ram for wbw
-//             if(bk==0x3e)topram3e[pa]=val;
-//             if(bk==0x3f)topram3f[pa]=val;
-//             printf("[%2x-%4x]<-%2x\n",bk,pa,val);
-         }else{ 
+//         if(bk>=0x3e){
+//         }else{ 
             if(bk-32>rampages){
                 printf("\n******* Ram bank write fail  B%02X(%04X) ********\n", bk,pa);
             }else{
@@ -378,7 +369,7 @@ void mem_write0(uint16_t addr, uint8_t val)
                if (trace & TRACE_BANK)  printf( "B%02X-", bk);
                if (trace & TRACE_MEM)  printf( "W%04X[%02X]\n", addr, val);
             }   
-         }    
+//         }    
       }	      
       // if its <32 its rom and im not going to try to write to it, so nar...
    }else{
@@ -1527,7 +1518,6 @@ int CompareFlashToSDROM(const char * filename){
     uint8_t e=1;
     fr = f_open(&fil, filename, FA_READ); //FA_WRITE
     if (FR_OK != fr && FR_EXIST != fr){
-//        panic("\nf_open(%s) error Compare: %s (%d)\n", filename, FRESULT_str(fr), fr);
         panic("\nf_open(%s) error Compare: (%d)\n", filename, fr);
     }else{
         fr = f_read(&fil, &buffer, COMPSIZE, &br);
@@ -1536,7 +1526,7 @@ int CompareFlashToSDROM(const char * filename){
         }
     }
     f_close(&fil);
-    if(e==0)printf("Flash Rom doesn't match $s\n",filename);	
+    if(e==0)printf("Flash Rom doesn't match %s\n",filename);	
     return e;
     
 }
@@ -1546,7 +1536,6 @@ uint32_t CksumFlash(uint32_t romsize){
     uint32_t x;
     uint32_t c=0;
     for(x=0;x<romsize;x++)c+=rom[x];
-//   printf("CKSUM %i\n",c);
     return c;
 }
 
@@ -1556,7 +1545,6 @@ void ReadSdToFlash(FRESULT fr,const char * filename,int readsize){
     FIL fil;
     fr = f_open(&fil, filename, FA_READ); //FA_WRITE
     if (FR_OK != fr && FR_EXIST != fr){
-//        panic("\nf_open(%s) error READ ROM : %s (%d)\n", filename, FRESULT_str(fr), fr);
         panic("\nf_open(%s) error READ ROM : (%d)\n", filename, fr);
     }else{
       int a,b;
