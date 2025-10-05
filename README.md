@@ -44,6 +44,15 @@ more details at https://github.com/ExtremeElectronics/RC20XX-file-transfer-progr
 Only the first 4 slices on IDE0 are accessible.
 Very untested at the moment.
 
+## Serial
+
+The switch on the back of the WBW kit selects the serial port default
+This can be overriden in the RC2040.ini on the SD card
+### SIO A/B
+Serial ports can be changed from ROMWBW boot if using SIO 
+SIO A is mapped to the default (either USB or UART)
+SIO B is mapped to the other serial port.
+
 ## Notes
 Inreased bank RAM so, With the latest ROMWBW. CP/M 3 and ZPM3 will now work.
 
