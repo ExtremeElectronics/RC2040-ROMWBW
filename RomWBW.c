@@ -12,7 +12,7 @@
 //define to use ROMWBW PCB kit
 //undefine to use RC2040 PCB kit
 #define RCROMWBW 1
-
+//#define DevBoard 1
 
 #ifdef PICO_RP2350
 //define to try FFS from AUX Button (may be broken'ish)
@@ -30,6 +30,7 @@
 #include "hardware/irq.h"
 #include "pico/multicore.h"
 #include "hardware/flash.h" //AR-gh!
+#include "hardware/clocks.h"
 
 //iniparcer
 #include "dictionary.h"
@@ -82,10 +83,17 @@ FIL fild1;
 uint16_t disksound_pointer=0;
 volatile uint8_t playing_disk=1; 
 uint16_t disksound_timer=0;
+#define PWMrate 90
 //must be pins on the same slice
+#ifndef DevBoard
 #define soundIO1 15
 #define soundIO2 14
-#define PWMrate 90
+#endif
+
+#ifdef DevBoard
+#define soundIO1 20
+#define soundIO2 21
+#endif
 
 uint PWMslice;
 uint8_t SPO256Port=0x28;
@@ -108,8 +116,9 @@ volatile static uint8_t BeepDataReady=0;
 uint8_t GetNeoData(uint8_t addr);
 
 #define NUM_PIXELS 128
-#define PIXEL_PIN 28
+#define PIXEL_PIN 22
 //True for RGBW , False for RGB Neopixels
+
 #define RGBW 0
 
 uint8_t NeoPixelPort=0x40;
@@ -118,6 +127,7 @@ uint8_t NeoPortData;
 uint8_t NeoPortDataReady=0;
 uint8_t pixels[NUM_PIXELS][3];
 uint8_t pixelspallette[256][3];
+
 
 //watch
 uint16_t watch= 0x0000;
@@ -192,12 +202,18 @@ static int charoutUSB=0;
 //PIO
 int PIOA=0;
 
+#ifndef DevBoard
 #ifdef RCROMWBW
 uint8_t PIOAp[]={26,22,21,20,19,18,17,16};
 #endif
 
 #ifndef RCROMWBW
 uint8_t PIOAp[]={16,17,18,19,20,21,26,27};
+#endif
+#endif
+
+#ifdef DevBoard
+uint8_t PIOAp[]={11,12,13,14,15,16,17,18};
 #endif
 
 
@@ -318,6 +334,8 @@ static void z80_vardump(void)
 	sleep_ms(2);
 }
 
+//################################################### Memory access #############################################
+
 
 static uint8_t mem_read0(uint16_t addr)
 {
@@ -411,6 +429,9 @@ void mem_write(int unused, uint16_t addr, uint8_t val){
 	 mem_write0(addr, val);
 }
 
+//###################################################### Z80 code Trace / disassemble  ###################################
+
+
 
 uint8_t z80dis_byte(uint16_t addr){
 	uint8_t r = do_mem_read(addr, 1);
@@ -450,6 +471,7 @@ static void z80_trace(unsigned unused){
 
 
 
+// ############################################## SIO / ACIA serial support Functions #####################################
 
 // experimental usb char in circular buffer
 
@@ -505,6 +527,7 @@ int testUARTcharwaiting(){
       return charinUART!=charoutUART;
 }
 
+
 char getUARTcharwaiting(void){
     char c=0;
     if(charinUART!=charoutUART){
@@ -513,20 +536,17 @@ char getUARTcharwaiting(void){
         if (charoutUART==INBUFFERSIZE){
             charoutUART=0;
         }
-
     }else{
         printf("UART Buffer underrun");
     }
   return c;
-
 }
 
 
-unsigned int check_chario(void)
-{
+unsigned int check_chario(uint8_t s_port){
    unsigned int r = 0;
 
-   if (UseUsb==0){	
+   if (UseUsb==s_port){	
 	if(testUARTcharwaiting()){
 	//bodge.. if currently in ACIA interrupt , lie that there is nothng waiting
 	//this prevents overruns
@@ -538,8 +558,7 @@ unsigned int check_chario(void)
                 r|=1;
             }     
         }
-        if (uart_is_writable(UART_ID )>0)
-	    r |= 2;//transmit ready
+        if (uart_is_writable(UART_ID )>0)  r |= 2;//transmit ready
    }else{
         if(testUSBcharwaiting()){
          //bodge.. if currently in interrupt , lie that there is nothng waiting
@@ -557,11 +576,11 @@ unsigned int check_chario(void)
    return r;
 }
 
-unsigned int next_char(void)
+
+unsigned int next_char(uint8_t s_port)
 {
     char c;
-    if (UseUsb==0){
-
+    if (UseUsb==s_port){
 	//READ UART WITH waiting char
         //uart_read_blocking(UART_ID,&c,1);
         c=getUARTcharwaiting();
@@ -570,15 +589,12 @@ unsigned int next_char(void)
         c=getUSBcharwaiting();
     }
 
-//    if (c == 0x0A) c = '\r';
-//    putchar(c);
     return c;
 }
 
+void out_char(char * val,uint8_t s_port){
 
-void out_char(char * val){
-
-    if (UseUsb==0){
+    if (UseUsb==s_port){
         //out via UART
         uart_write_blocking(UART_ID,val,1);
     }else{
@@ -587,12 +603,13 @@ void out_char(char * val){
     }  
 }
 
-
 void recalc_interrupts(void)
 {
 	int_recalc = 1;
 }
 
+
+// ################################################ ACIA #############################################
 
 static void acia_check_irq(struct acia *acia)
 {
@@ -678,7 +695,7 @@ static void uart_clear_interrupt(struct uart16x50 *uptr, uint8_t n)
 
 static void uart_event(struct uart16x50 *uptr)
 {
-    uint8_t r = check_chario();
+    uint8_t r = check_chario(0);
     uint8_t old = uptr->lsr;
     uint8_t dhigh;
     if (uptr->input && (r & 1))
@@ -754,7 +771,7 @@ static void uart_write(struct uart16x50 *uptr, uint8_t addr, uint8_t val)
         if (uptr->dlab == 0) {
             if (uptr == &uart[0]) {
                 //uart_putc(UART_ID,val);
-                out_char(&val);
+                out_char(&val,0);
                 //putchar(val);
                 //fflush(stdout);
             }
@@ -803,8 +820,8 @@ static uint8_t uart_read(struct uart16x50 *uptr, uint8_t addr)
         /* receive buffer */
         if (uptr == &uart[0] && uptr->dlab == 0) {
             uart_clear_interrupt(uptr, RXDA);
-            if (check_chario() & 1)
-                return next_char();
+            if (check_chario(0) & 1)
+                return next_char(0);
             return 0x00;
         } else
             return uptr->ls;
@@ -825,7 +842,7 @@ static uint8_t uart_read(struct uart16x50 *uptr, uint8_t addr)
         return uptr->mcr;
     case 5:
         /* lsr */
-        r = check_chario();
+        r = check_chario(0);
         uptr->lsr &=0x90;
         if (r & 1)
              uptr->lsr |= 0x01;	/* Data ready */
@@ -849,6 +866,8 @@ static uint8_t uart_read(struct uart16x50 *uptr, uint8_t addr)
     return 0xFF;
 }
 
+
+// ######################################################## SIO ###############################################
 
 struct z80_sio_chan {
 	uint8_t wr[8];
@@ -998,31 +1017,45 @@ static void sio2_queue(struct z80_sio_chan *chan, uint8_t c)
 
 static void sio2_channel_timer(struct z80_sio_chan *chan, uint8_t ab)
 {
-	if (ab == 0) {
-		int c = check_chario();
-//		printf("Check chario %i %i \n\r",c,sio2_input);
-		if (sio2_input) {
-			if (c & 1){
-			        if(chan->dptr<1){ //prevent overrun
-				  sio2_queue(chan, next_char());
-//				  printf("Added to q");
-				}
-			}
+    if (ab == 0) {
+    
+	int c = check_chario(0);
+//	printf("Check chario %i %i \n\r",c,sio2_input);
+	if (sio2_input) {
+	    if (c & 1){
+		if(chan->dptr<1){ //prevent overrun
+		    sio2_queue(chan, next_char(0));
+//		    printf("Added to q");
 		}
-		if (c & 2) {
-			if (!(chan->rr[0] & 0x04)) {
-				chan->rr[0] |= 0x04;
-				if (chan->wr[1] & 0x02)
-					sio2_raise_int(chan, INT_TX);
-			}
-		}
-	} else {
-		if (!(chan->rr[0] & 0x04)) {
-			chan->rr[0] |= 0x04;
-			if (chan->wr[1] & 0x02)
-				sio2_raise_int(chan, INT_TX);
-		}
+	    }
 	}
+	if (c & 2) {
+    	     if (!(chan->rr[0] & 0x04)) {
+		 chan->rr[0] |= 0x04;
+	         if (chan->wr[1] & 0x02) sio2_raise_int(chan, INT_TX);
+	     }
+	}
+	
+    } else {
+    
+  	int c = check_chario(1);
+//	printf("Check chario %i %i \n\r",c,sio2_input);
+	if (sio2_input) {
+	    if (c & 1){
+		 if(chan->dptr<1){ //prevent overrun
+		     sio2_queue(chan, next_char(1));
+//		     printf("Added to q");
+	   	 }
+	    }
+	}
+	if (c & 2) {
+	    if (!(chan->rr[0] & 0x04)) {
+	        chan->rr[0] |= 0x04;
+		if (chan->wr[1] & 0x02) sio2_raise_int(chan, INT_TX);
+	    }
+	}
+	
+    }
 }
 
 static void sio2_timer(void)
@@ -1172,15 +1205,19 @@ static void sio2_write(uint16_t addr, uint8_t val)
 			printf( "sio%c write data %d\n", (addr & 2) ? 'b' : 'a', val);
 		if (chan == sio)
 //			write(1, &val, 1);
-			out_char(&val);
+			out_char(&val,0);
 		else {
 //			write(1, "\033[1m;", 5);
 			//write(1, &val,1);
-			out_char(&val);
+			out_char(&val,1);
 //			write(1, "\033[0m;", 5);
 		}
 	}
 }
+
+
+
+// ################################################### IDE ###############################
 
 
 static uint8_t my_ide_read(uint16_t addr)
@@ -1250,6 +1287,8 @@ static void PIOA_init(void){
     int a;
     for (a=0;a<8;a++){
        gpio_init(PIOAp[a]);
+       //for dev board
+//       gpio_pull_down(PIOAp[a]);
     }
 
 }
@@ -1262,13 +1301,13 @@ static uint8_t PIOA_read(void){
     //set pullups make input
     for (a=0;a<8;a++){
        gpio_set_dir(PIOAp[a],GPIO_IN);
-       gpio_pull_up(PIOAp[a]);
+//       gpio_pull_up(PIOAp[a]);
     }
-    sleep_us(200);
+    sleep_us(500);
     //get bits disable pullups
     for (a=0;a<8;a++){   
        if(gpio_get(PIOAp[a]))r=r+v;
-       gpio_disable_pulls(PIOAp[a]);
+//       gpio_disable_pulls(PIOAp[a]);
        v=v << 1;
     }
     return r;
@@ -1828,36 +1867,21 @@ void DumpFlashRom(unsigned int FromAddr, int dumpsize,FRESULT fr){
 
 
 int GetSwitches(){
-//  gpio_init(HASSwitchesIO); 
-//  gpio_set_dir(HASSwitchesIO,GPIO_IN);
-//  gpio_pull_up(HASSwitchesIO);
-
 //serial port selection swithch
-  gpio_init(SERSEL);
-  gpio_set_dir(SERSEL,GPIO_IN);
-  gpio_pull_up(SERSEL);
+    gpio_init(SERSEL);
+    gpio_set_dir(SERSEL,GPIO_IN);
+    gpio_pull_up(SERSEL);
 
-  sleep_ms(1); //wait for io to settle.
+    sleep_ms(1); //wait for io to settle.
 
-  int v=0;
-/*  if (gpio_get(HASSwitchesIO)==1){
-    PrintToSelected("\r\nNo Switches, no settings changed \n\r",1);
-    HasSwitches=0;
-  }else{
-    //switches present, use values
-    HasSwitches=1;
-*/
+    int v=0;
     if (gpio_get(SERSEL)==1){
         UseUsb=1;
-        PrintToSelected("Console Via USB  \n\r",1);
     }else{
         UseUsb=0;
-        PrintToSelected("Console Via UART \n\r",1);
     }
 
-
-
-//switches, then it has buttons and an LED too.
+//and buttons and an LED too.
 
 //setup DUMP gpio
     gpio_init(DUMPBUT);
@@ -1874,13 +1898,6 @@ int GetSwitches(){
     gpio_set_dir(AUXBUT,GPIO_IN);
     gpio_pull_up(AUXBUT);
 
-//setup PCBLED
-// done in led init now
-//    gpio_init(PCBLED);
-//    gpio_set_dir(PCBLED,GPIO_OUT);
-
-//  }
-//  return rombank;
     return 0;
 }
 
@@ -2348,7 +2365,7 @@ void main(void)
 	  idepath1 = iniparser_getstring(ini, "IDE:idefile1", "");
 	  
 	  // USB or UART
-	  UseUsb = iniparser_getint(ini, "CONSOLE:port", 1);
+	  UseUsb = iniparser_getint(ini, "CONSOLE:port", UseUsb);
 
 	  // ACIA /SERIAL
           SerialType = iniparser_getint(ini, "EMULATION:serialtype",0 );
@@ -2392,17 +2409,31 @@ void main(void)
 //	     printf("Override jumpers set in INI \n\r");
 //	  }
 	
+	
         }else{
             uart_puts(UART_ID,"No  \n\r");
             printf("SD INIT OK \n\r",1);
         }
+        
 
         flash_led(200);
-        if (UseUsb){
+        if (UseUsb==1){
             PrintToSelected("\rWaiting for USB to connect\n\r",1);
             //if usb wait for usb to connect.
             while (!tud_cdc_connected()) { sleep_ms(100);  }
         }
+
+
+        if(UseUsb==3){
+           printf("##ABORT##  Serial default NOT selected\n");
+           while(1);
+        }else{
+            if(UseUsb==1){   
+    	        printf("Default Serial USB\n"); 
+    	    }else{
+	        printf("Default Serial UART\n");
+	    }
+       }
 
 //compiled time
 	printf("\n\rCompiled %s %s\n",__DATE__,__TIME__);
@@ -2660,7 +2691,8 @@ sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);
 		}
 		
 		//fake USB char in interrupts
-		if (UseUsb==1) intUSBcharwaiting();
+//		if (UseUsb==1) intUSBcharwaiting();
+		intUSBcharwaiting();
 		
 		if (int_recalc) {
 			/* If there is no pending Z80 vector IRQ but we think

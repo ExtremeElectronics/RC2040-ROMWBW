@@ -61,7 +61,7 @@ static void acia_receive(struct acia *acia)
 	if (acia->status & 1)
 		acia->status |= 0x20;
 		
-	acia->rxchar = next_char();
+	acia->rxchar = next_char(0);
 	if (acia->trace)
 		printf( "ACIA rx.\n");
 	acia->status |= 0x01;	/* IRQ, and rx data full */
@@ -78,7 +78,7 @@ static void acia_transmit(struct acia *acia)
 
 void acia_timer(struct acia *acia)
 {
-	int s = check_chario();
+	int s = check_chario(0);
 	if ((s & 1) && acia->input)
 		acia_receive(acia);
 	if (s & 2)
@@ -140,7 +140,7 @@ void acia_write(struct acia *acia, uint16_t addr, uint8_t val)
 	case 1:
 		//write(1, &val, 1);
 //		uart_write_blocking(UART_ID,&val,1);
-	        out_char(&val);
+	        out_char(&val,0);
 		/* Clear TDRE - we now have a byte */
 		acia->status &= ~0x02;
 		acia_irq_compute(acia);

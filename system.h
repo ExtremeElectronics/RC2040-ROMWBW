@@ -7,9 +7,9 @@ extern void io_write(int unused, uint16_t port, uint8_t val);
 
 /* Serial interface from the core serial helpers */
 
-extern unsigned int check_chario(void);
-extern unsigned int next_char(void);
-extern void out_char(char *);
+extern unsigned int check_chario(uint8_t);
+extern unsigned int next_char(uint8_t);
+extern void out_char(char *,uint8_t);
 
 /* Interrupt helpers */
 extern void recalc_interrupts(void);
