@@ -259,7 +259,8 @@ static uint8_t have_16x50;
 static uint8_t fast = 0;
 static uint8_t int_recalc = 0;
 
-static uint16_t tstate_steps = 500;	/* RC2014 core v peritherals - higher z80 - lower pepherals  */
+//was 500
+static uint16_t tstate_steps = 1000;	/* RC2014 core v peritherals - higher z80 - lower pepherals  */
 
 /* IRQ source that is live in IM2 */
 static uint8_t live_irq;
@@ -2232,6 +2233,8 @@ void Core1Main(void){
       if(playing_disk){
         PlayDiskSounds();
       }
+      
+//      intUSBcharwaiting();
 
       tight_loop_contents();
   }
@@ -2380,12 +2383,12 @@ void main(void)
 	  watch = iniparser_getint(ini, "DEBUG:watch",0 );
 
 	  // PORT
-	  PIOA = iniparser_getint(ini, "[PORT]:pioa",0 );
+	  PIOA = iniparser_getint(ini, "PORT:pioa",0 );
 
-	  SPO256Port = iniparser_getint(ini, "[PORT]:spo256",SPO256Port );
-	  SPO256FreqPort = iniparser_getint(ini, "[PORT]:spo256freq",SPO256FreqPort );
-	  BeepPort = iniparser_getint(ini, "[PORT]:beep",BeepPort );
-	  NeoPixelPort = iniparser_getint(ini,"[PORT]:Neo", NeoPixelPort);
+	  SPO256Port = iniparser_getint(ini, "PORT:spo256",SPO256Port );
+	  SPO256FreqPort = iniparser_getint(ini, "PORT:spo256freq",SPO256FreqPort );
+	  BeepPort = iniparser_getint(ini, "PORT:beep",BeepPort );
+	  NeoPixelPort = iniparser_getint(ini,"PORT:Neo", NeoPixelPort);
 
           // Overclock
 	  overclock = iniparser_getint(ini, "SPEED:overclock",0 );
@@ -2403,12 +2406,7 @@ void main(void)
 
 
 //IF switches link present, get switches and select UART from switches
-//	  if (overridejumpers==0){
-	     GetSwitches();
-//	  }else{
-//	     printf("Override jumpers set in INI \n\r");
-//	  }
-	
+        GetSwitches();	
 	
         }else{
             uart_puts(UART_ID,"No  \n\r");
@@ -2420,7 +2418,11 @@ void main(void)
         if (UseUsb==1){
             PrintToSelected("\rWaiting for USB to connect\n\r",1);
             //if usb wait for usb to connect.
-            while (!tud_cdc_connected()) { sleep_ms(100);  }
+            for (int a=0;a<30;a++){
+               if (tud_cdc_connected())break;
+               sleep_ms(100);
+            }
+            //while (!tud_cdc_connected()) { sleep_ms(100);  }
         }
 
 
@@ -2653,7 +2655,33 @@ sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);
 	while (!emulator_done) {
 		int i;
 		/* 36400 T states for base RC2014 - varies for others */
-//                if(HasSwitches){       
+
+		// was i40 j50
+		for (i = 0; i < 40; i++) {  //origional
+		    int j;
+		    //was 5) /10
+		    for (j = 0; j < 200; j++) { Z80ExecuteTStates(&cpu_z80, (tstate_steps + 5)/ 10);	}
+
+		    if (acia) acia_timer(acia);
+		    if (sio2) sio2_timer();
+		    if (have_16x50) uart_event(&uart[0]);
+		}
+		
+		//fake USB char in interrupts
+		intUSBcharwaiting();
+		
+		if (int_recalc) {
+			/* If there is no pending Z80 vector IRQ but we think
+			   there now might be one we use the same logic as for
+			   reti */
+			if (!live_irq )	poll_irq_event();
+			/* Clear this after because reti_event may set the
+			   flags to indicate there is more happening. We will
+			   pick up the next state changes on the reti if so */
+			if (!(cpu_z80.IFF1|cpu_z80.IFF2)) int_recalc = 0;
+		}
+		
+		
 	            if(gpio_get(DUMPBUT)==0){
                         DumpMemory(0,0x10000,fr);
                         while(gpio_get(DUMPBUT)==0);
@@ -2680,32 +2708,9 @@ sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);
                        gpio_put(AUXLED,0);
                     
                     }
-  //              }
 
-		for (i = 0; i < 40; i++) {  //origional
-		    int j;
-		    for (j = 0; j < 50; j++) { Z80ExecuteTStates(&cpu_z80, (tstate_steps + 5)/ 10);	}
-		    if (acia) acia_timer(acia);
-		    if (sio2) sio2_timer();
-		    if (have_16x50) uart_event(&uart[0]);
-		}
 		
-		//fake USB char in interrupts
-//		if (UseUsb==1) intUSBcharwaiting();
-		intUSBcharwaiting();
 		
-		if (int_recalc) {
-			/* If there is no pending Z80 vector IRQ but we think
-			   there now might be one we use the same logic as for
-			   reti */
-			if (!live_irq )
-				poll_irq_event();
-			/* Clear this after because reti_event may set the
-			   flags to indicate there is more happening. We will
-			   pick up the next state changes on the reti if so */
-			if (!(cpu_z80.IFF1|cpu_z80.IFF2))
-   			   int_recalc = 0;
-		}
 	}
 }
 
