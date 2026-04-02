@@ -12,7 +12,11 @@
 //define to use ROMWBW PCB kit
 //undefine to use RC2040 PCB kit
 #define RCROMWBW 1
-//#define DevBoard 1
+
+//define to add display
+//undefine to remove display
+#define WithDisplay 1
+
 
 #ifdef PICO_RP2350
 //define to try FFS from AUX Button (may be broken'ish)
@@ -202,18 +206,12 @@ static int charoutUSB=0;
 //PIO
 int PIOA=0;
 
-#ifndef DevBoard
 #ifdef RCROMWBW
 uint8_t PIOAp[]={26,22,21,20,19,18,17,16};
 #endif
 
 #ifndef RCROMWBW
 uint8_t PIOAp[]={16,17,18,19,20,21,26,27};
-#endif
-#endif
-
-#ifdef DevBoard
-uint8_t PIOAp[]={11,12,13,14,15,16,17,18};
 #endif
 
 
@@ -228,7 +226,13 @@ const uint DISKLED = PICO_DEFAULT_LED_PIN;
 
 
 //serial selection
+#ifndef WithDisplay
 const uint SERSEL = 13;
+#endif
+#ifdef WithDisplay
+const uint SERSEL = 11;
+#endif
+
 
 //buttons
 const uint DUMPBUT =9;
@@ -251,6 +255,49 @@ const uint AUXLED =6;
 // datasheet for information on which other pins can be used.
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
+
+//Display
+#ifdef WithDisplay
+
+#define CGRAMMAX 0x40
+#define DDRAMMAX 0x80
+#define DisplayDebug 0 //set to 1 to add debug output
+int DisplayRegPort=0xda;
+int DisplayDataPort=0xdb;
+//uint8_t DisplayReg=0;
+//uint8_t DisplayData=0;
+uint8_t DisplayIR=0;
+uint8_t DisplayDR=0;
+uint8_t DisplayBusy=0;
+uint8_t DisplayAddress=0;
+uint8_t DisplayAC=0;
+uint8_t DisplayACGADD=0;
+uint8_t DisplayOn=0;
+uint8_t DisplayID=0;
+uint8_t DisplayShift=0;
+uint8_t DisplayCursorOn=0;
+uint8_t DisplayBlinkOn=0;
+uint8_t DisplayRight=0;
+uint8_t DisplayFont=0;
+uint8_t DisplayCGRAM[CGRAMMAX];
+uint8_t DisplayDDRAM[DDRAMMAX];
+uint8_t DisplayLines=0;
+uint8_t DisplayDirty=0;
+
+
+//I2c Settings
+#define I2CInst i2c0 //also in Romwbw.h ... yes I know!
+#define I2C_SDA_PIN 12
+#define I2C_SCL_PIN 13
+#define I2C_BAUDRATE 400000 //400Khz
+
+
+#include "display/display.h"
+#include "display/assets.h"
+
+
+#endif
+
 
 static uint8_t switchrom = 1;
 
@@ -1327,6 +1374,200 @@ static void PIOA_write(uint8_t val){
 
 }
 
+#ifdef WithDisplay
+
+//############################################################################################################
+//                                              DISPLAY
+//############################################################################################################
+
+void init_I2C(void){
+    //init i2c
+
+    //SDA
+    gpio_init(I2C_SDA_PIN);
+    gpio_set_function(I2C_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SDA_PIN);
+    //SCL
+    gpio_init(I2C_SCL_PIN);
+    gpio_set_function(I2C_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SCL_PIN);
+
+    i2c_init(I2CInst, I2C_BAUDRATE);
+
+}
+
+void init_display(void){
+
+    if (DisplayDebug)printf("Display Init\n");
+    SSD1306_init(0x3C,SSD1306_W128xH32);
+
+    SSD1306_background_image(xk_wbw);
+    SSD1306_sendBuffer();
+    DisplayDirty=0;
+}
+
+
+void DisplayLine(uint8_t line){
+   uint8_t linestart[]={0x0,0x40,0x14,0x54};
+//   uint8_t linestart[]={0x0,0x40,0x10,0x50};
+   uint8_t c=0;
+   uint8_t y=line*8; // 8 char deap
+   uint8_t cw=6; // 6char wide
+//   uint8_t lo=line*20; //DDRAM address for each start of line
+   uint8_t lo=linestart[line];
+   uint8_t dw=20; //display width in chars
+   for(c=0;c<dw;c++){
+      SSD1306_drawChar8x8(DisplayDDRAM[c+lo],c*cw,y);
+   }
+//   SSD1306_sendBuffer();
+}
+
+void printBin(unsigned char byte)
+{
+    int i = 8; /* however many bits are in a byte on your platform */
+    while(i--) {
+        putchar('0' + ((byte >> i) & 1)); /* loop through and print the bits */
+    }
+}
+
+void DisplayDDBuffer(){
+    SSD1306_clear();
+    if(DisplayOn==1){
+        DisplayLine(0);
+        DisplayLine(1);
+        DisplayLine(3);
+        DisplayLine(4);
+    }
+    SSD1306_sendBuffer();
+    if (DisplayDirty==2)DisplayDirty=0;
+}
+
+void DisplayWrite(uint8_t val,uint8_t isdata){
+
+//    printf("DW D%i ",isdata);
+
+    if(isdata==0){
+        //IR
+        if (DisplayDebug)printf("WD ");
+        if (DisplayDebug)printBin(val);
+
+        if (val &0x80){
+           //Set DD Ram Address
+            DisplayAC=val & 0x7f;
+            DisplayACGADD=0;
+            if (DisplayDebug)printf(" DDRAM %i",DisplayAC);
+        }
+        else if (val &0x40){
+            //Set CG Ram Address
+            DisplayAC=val & 0x3f;
+            DisplayACGADD=1;
+            if (DisplayDebug)printf(" CGRAM %i",DisplayAC);
+        }
+        else if (val &0x20){
+            //Function Set
+            //datalength Not applicable
+            if (val &0x8)DisplayLines=2;
+            else DisplayLines=1;
+            if (val &0x4)DisplayFont=1;
+            else DisplayFont=0;
+            if (DisplayDebug)printf(" FS DL8 N%i F%i",DisplayLines,DisplayFont);
+        }
+        else if (val &0x10){
+            //Cursor or display shift
+            if (val &0x8)DisplayShift=1;
+            else DisplayShift=0;
+            if (val &0x4)DisplayRight=1;
+            else DisplayRight=0;
+            if (DisplayDebug)printf(" CDS DS%i DR%i",DisplayShift,DisplayRight);
+        }
+        else if (val &0x08){
+            //Display on/off
+            if (val &0x4){
+                DisplayOn=1;
+//                SSD1306_turnOn();
+                DisplayDirty=1;
+            }else{
+                DisplayOn=0;
+                DisplayDirty=1;
+//                SSD1306_turnOff();
+            }
+            if (val &0x2)DisplayCursorOn=1;
+            else DisplayCursorOn=0;
+            if (val &0x1)DisplayBlinkOn=1;
+            else DisplayBlinkOn=0;
+            if (DisplayDebug)printf(" DOF DO%i DC%i DB%i",DisplayOn,DisplayCursorOn,DisplayBlinkOn);
+        }
+        else if (val &0x04){
+            //Entry Mode Set
+            if (val &0x2)DisplayID=1;
+            else DisplayID=0;
+            if (val &0x1)DisplayShift=1;
+            else DisplayShift=0;
+            if (DisplayDebug)printf(" EMS ID%i S%i",DisplayID,DisplayShift);
+        }
+        else if (val & 0x02){
+            //ReturnHome
+            DisplayAC=0;
+            if (DisplayDebug)printf(" RH");
+        }
+        else if(val & 0x01){
+            //DisplayClear
+            //SSD1306_clear();
+            //SSD1306_sendBuffer();
+            uint8_t c;
+            for(c=0;c<DDRAMMAX;c++)DisplayDDRAM[c]=0;
+            DisplayAC=0;
+            if (DisplayDebug)printf(" CLS");
+            DisplayDirty=1;
+        }
+    }else{
+        //DD write
+        if (DisplayDebug)printf("WR");
+//       printf("DDW %i %i\n",val,DisplayAC);
+        if (DisplayAC<=DDRAMMAX){
+            DisplayDDRAM[DisplayAC]=val;
+            if (DisplayDebug)printf(" %i->[%i] %c",DisplayDDRAM[DisplayAC],DisplayAC,val);
+            DisplayAC++;
+        }else{
+            if (DisplayDebug)printf(" %i->[%i] OOR! %c",val,DisplayAC,val);
+        }
+
+        //DisplayDDBuffer();
+        DisplayDirty=1;
+
+    }
+    if (DisplayDebug)printf("\n");
+}
+
+
+uint8_t  DisplayRead(uint8_t isdata){
+    if (DisplayDebug)printf("DR %i ",isdata);
+    uint8_t r=0;
+    if(isdata==0){
+       //return Busyflag and add counter
+       //Busy flag
+       if (DisplayBusy==1)r=r | 0x80;
+       //Address counter
+       r=r | (DisplayAC & 0x7f);
+       if (DisplayDebug)printf(" R%i\n",r);
+       return r;
+    }else{
+       //DR read
+       if (DisplayACGADD==0){
+          r=DisplayDDRAM[DisplayAC];
+       }else{
+          r=DisplayCGRAM[DisplayAC];
+       }
+       if (DisplayDebug)printf(" %i %i\n",DisplayACGADD,r);
+       return r;
+    }
+
+
+  return 0;
+}
+
+#endif
+
 
 static uint8_t io_read_2014(uint16_t addr)
 {
@@ -1355,6 +1596,10 @@ static uint8_t io_read_2014(uint16_t addr)
 	else if (addr == SPO256FreqPort) return SPO256FreqPortData; 
 	else if (addr == BeepPort) return BeepDataReady;
         else if (addr >= NeoPixelPort && addr <= NeoPixelPort+7) return GetNeoData(addr-NeoPixelPort);
+#ifdef WithDisplay
+        else if (addr == DisplayRegPort)return DisplayRead(0);
+        else if (addr == DisplayDataPort)return DisplayRead(1);
+#endif
 	if (trace & TRACE_UNK)
 		printf( "Unknown read from port %04X\n", addr);
 	return 0x78;	/* 78 is what my actual board floats at */
@@ -1396,6 +1641,10 @@ static void io_write_2014(uint16_t addr, uint8_t val, uint8_t known)
 		NeoPortData = val;
 		NeoPortDataReady = 1;
 		}
+#ifdef WithDisplay		
+	else if (addr == DisplayRegPort)DisplayWrite(val,0);
+        else if (addr == DisplayDataPort)DisplayWrite(val,1);
+#endif
 	else if (addr == 0xFD) {
 		trace &= 0xFF00;
 		trace |= val;
@@ -2234,7 +2483,12 @@ void Core1Main(void){
         PlayDiskSounds();
       }
       
-//      intUSBcharwaiting();
+#ifdef WithDisplay
+      if(DisplayDirty){
+        DisplayDirty=2;
+        DisplayDDBuffer();
+      }
+#endif
 
       tight_loop_contents();
   }
@@ -2303,6 +2557,13 @@ void main(void)
         stdio_usb_init();
         flash_led(250);
         printf("\n %c[2J\n\n\rUSB INIT OK \n\r",27);
+           
+#ifdef WithDisplay
+// init display
+        init_I2C();
+        init_display();
+#endif           
+           
                 
 //init uart
         init_pico_uart();
@@ -2321,11 +2582,18 @@ void main(void)
             gpio_put(DISKLED, 1); // SET LED PIN ON as a subtle hint.
             printf("SD INIT FAIL  \n\r");
             uart_puts(UART_ID, "SD INIT FAIL\n\r");
+#ifdef WithDisplay            
+            SSD1306_background_image(NoDisk);
+            SSD1306_sendBuffer();
+            DisplayDirty=0;
+#endif 
             sleep_ms(1000);
             while(1); //halt
         }
 	printf("SD INIT OK  \n\r");
         uart_puts(UART_ID, "SD INIT OK \n\r");
+        
+        
 
 // inifile parse
 	dictionary * ini ;
@@ -2389,6 +2657,10 @@ void main(void)
 	  SPO256FreqPort = iniparser_getint(ini, "PORT:spo256freq",SPO256FreqPort );
 	  BeepPort = iniparser_getint(ini, "PORT:beep",BeepPort );
 	  NeoPixelPort = iniparser_getint(ini,"PORT:Neo", NeoPixelPort);
+#ifdef WithDisplay
+          DisplayRegPort = iniparser_getint(ini,"PORT:DisplayReg",DisplayRegPort);
+          DisplayDataPort= iniparser_getint(ini,"PORT:DisplayData",DisplayDataPort);
+#endif
 
           // Overclock
 	  overclock = iniparser_getint(ini, "SPEED:overclock",0 );
