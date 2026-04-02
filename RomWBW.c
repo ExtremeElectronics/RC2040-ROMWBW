@@ -15,7 +15,7 @@
 
 //define to add display
 //undefine to remove display
-#define WithDisplay 1
+//#define WithDisplay 1
 
 
 #ifdef PICO_RP2350
