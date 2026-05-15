@@ -14,9 +14,8 @@
 #define RCROMWBW 1
 
 //define to add display
-//undefine to remove display
+//undefine to remove display also moves usb/uart switch to GPIO12
 #define WithDisplay 1
-
 
 #ifdef PICO_RP2350
 //define to try FFS from AUX Button (may be broken'ish)
@@ -217,12 +216,12 @@ uint8_t PIOAp[]={16,17,18,19,20,21,26,27};
 
 //PICO GPIO
 // use regular LED on pico if NOT WBW PCB (gpio 25 most likly)
-#ifdef RCROMWBW
+//#ifdef RCROMWBW
 const uint DISKLED = 10; //Rom WBW PCB LED
-#endif
-#ifndef RCROMWBW
-const uint DISKLED = PICO_DEFAULT_LED_PIN;
-#endif
+//#endif
+//#ifndef RCROMWBW
+//const uint DISKLED = PICO_DEFAULT_LED_PIN;
+//#endif
 
 
 //serial selection
