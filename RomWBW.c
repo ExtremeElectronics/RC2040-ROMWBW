@@ -15,7 +15,7 @@
 
 //define to add display
 //undefine to remove display
-//#define WithDisplay 1
+#define WithDisplay 1
 
 
 #ifdef PICO_RP2350
@@ -264,8 +264,7 @@ const uint AUXLED =6;
 #define DisplayDebug 0 //set to 1 to add debug output
 int DisplayRegPort=0xda;
 int DisplayDataPort=0xdb;
-//uint8_t DisplayReg=0;
-//uint8_t DisplayData=0;
+
 uint8_t DisplayIR=0;
 uint8_t DisplayDR=0;
 uint8_t DisplayBusy=0;
@@ -289,15 +288,12 @@ uint8_t DisplayDirty=0;
 #define I2CInst i2c0 //also in Romwbw.h ... yes I know!
 #define I2C_SDA_PIN 12
 #define I2C_SCL_PIN 13
-#define I2C_BAUDRATE 400000 //400Khz
-
+#define I2C_BAUDRATE 200000 //200Khz
 
 #include "display/display.h"
 #include "display/assets.h"
 
-
 #endif
-
 
 static uint8_t switchrom = 1;
 
@@ -306,8 +302,13 @@ static uint8_t have_16x50;
 static uint8_t fast = 0;
 static uint8_t int_recalc = 0;
 
-//was 500
-static uint16_t tstate_steps = 1000;	/* RC2014 core v peritherals - higher z80 - lower pepherals  */
+//Emulaton speed tweaks.
+static uint16_t tstate_steps = 500;
+//300 better for speed (core). 20 better for IO
+#define IOMAX 20
+#define IOMIN 400
+static uint16_t IoTimeShare = 200;
+
 
 /* IRQ source that is live in IM2 */
 static uint8_t live_irq;
@@ -526,7 +527,6 @@ static void z80_trace(unsigned unused){
 int intUSBcharwaiting(){
 // no interrupt or waiting check so use unblocking getchar, adds to buff if avai
     int c = getchar_timeout_us(0);
-//    if(c!=ENDSTDIN){
       if(c>=0){ // fix for SDK2 by djrose80
         charbufferUSB[charinUSB]=(char)c;
         charinUSB++;
@@ -604,7 +604,12 @@ unsigned int check_chario(uint8_t s_port){
                 }
             }else{
                 r|=1;
-            }     
+            }
+            // if we have a char, decrease interrupt latancey
+           IoTimeShare=IOMAX;        
+        }else{
+           // if no chars for a while, increase emulation speed
+           if (IoTimeShare<IOMIN) IoTimeShare++;
         }
         if (uart_is_writable(UART_ID )>0)  r |= 2;//transmit ready
    }else{
@@ -618,7 +623,12 @@ unsigned int check_chario(uint8_t s_port){
             }else{
                  r|=1;
             }    
-       }
+            // if we have a char, decrease interrupt latancey
+            IoTimeShare=IOMAX;
+       }else{
+            // if no chars for a while, increase emulation speed
+            if (IoTimeShare<IOMIN) IoTimeShare++;
+       }    
        r |=2; //always ready to tx
    }
    return r;
@@ -1398,7 +1408,7 @@ void init_I2C(void){
 
 void init_display(void){
 
-    if (DisplayDebug)printf("Display Init\n");
+    printf("Display Init\n");
     SSD1306_init(0x3C,SSD1306_W128xH32);
 
     SSD1306_background_image(xk_wbw);
@@ -2561,7 +2571,9 @@ void main(void)
 #ifdef WithDisplay
 // init display
         init_I2C();
+        printf(" Done\n ");
         init_display();
+        printf("\nDone\n");
 #endif           
            
                 
@@ -2588,7 +2600,9 @@ void main(void)
             DisplayDirty=0;
 #endif 
             sleep_ms(1000);
-            while(1); //halt
+            while(1){
+               flash_led(250);
+            }; //halt
         }
 	printf("SD INIT OK  \n\r");
         uart_puts(UART_ID, "SD INIT OK \n\r");
@@ -2929,10 +2943,10 @@ sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);
 		/* 36400 T states for base RC2014 - varies for others */
 
 		// was i40 j50
-		for (i = 0; i < 40; i++) {  //origional
+		for (i = 0; i < 40; i++) {  
 		    int j;
-		    //was 5) /10
-		    for (j = 0; j < 200; j++) { Z80ExecuteTStates(&cpu_z80, (tstate_steps + 5)/ 10);	}
+		    //IoTimeShare 200 better for speed. 50 better for IO
+		    for (j = 0; j < IoTimeShare; j++) { Z80ExecuteTStates(&cpu_z80, (tstate_steps + 5)/ 10);	}
 
 		    if (acia) acia_timer(acia);
 		    if (sio2) sio2_timer();
