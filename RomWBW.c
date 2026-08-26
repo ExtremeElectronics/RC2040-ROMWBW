@@ -62,6 +62,9 @@
 
 #include "malloc.h"
 
+#include "CTS256_AL2.c"
+//#include "rules_array.c"
+
 //#define FFS True
 
 //ide file handles
@@ -101,9 +104,16 @@ uint16_t disksound_timer=0;
 uint PWMslice;
 uint8_t SPO256Port=0x28;
 uint8_t SPO256FreqPort=0x2a;
+uint8_t CTS256Port=0x2b;
 volatile static uint8_t SPO256DataOut;
 volatile static uint8_t SPO256DataReady=0;
 volatile static uint8_t SPO256FreqPortData=90;
+volatile static uint8_t CTS256DataOut;
+volatile static uint8_t CTS256DataReady=0;
+char Sentance[1024]={' ',0};
+uint16_t SentPos=0;
+uint8_t speak=0;
+uint8_t speakPos=0;
 
 //Beep
 #include "midiNotes.h"
@@ -1603,6 +1613,8 @@ static uint8_t io_read_2014(uint16_t addr)
 	else if (addr == PIOA) return PIOA_read();	
 	else if (addr == SPO256Port)  return SPO256DataReady;
 	else if (addr == SPO256FreqPort) return SPO256FreqPortData; 
+	else if (addr == CTS256Port)  return CTS256DataReady;
+
 	else if (addr == BeepPort) return BeepDataReady;
         else if (addr >= NeoPixelPort && addr <= NeoPixelPort+7) return GetNeoData(addr-NeoPixelPort);
 #ifdef WithDisplay
@@ -1643,6 +1655,7 @@ static void io_write_2014(uint16_t addr, uint8_t val, uint8_t known)
 		}
 	else if (addr == PIOA)PIOA_write(val);	
 	else if (addr == SPO256Port){SPO256DataOut=val;SPO256DataReady=1;}
+	else if (addr == CTS256Port){CTS256DataOut=val;CTS256DataReady=1;}
 	else if (addr == BeepPort){BeepDataOut=val;BeepDataReady=1;}
         else if (addr == SPO256FreqPort){SPO256FreqPortData=val;}
 	else if (addr >= NeoPixelPort && addr<= NeoPixelPort+7){
@@ -2426,7 +2439,7 @@ void DoNeo(uint8_t addr,uint8_t data){
        if (neorepeat>0){
            for (int p=neorepeat;p<neomax;p++){
                pixels[p][0]=pixels[p-neorepeat][0];
-                pixels[p][1]=pixels[p-neorepeat][1];
+               pixels[p][1]=pixels[p-neorepeat][1];
                pixels[p][2]=pixels[p-neorepeat][2];
            }
        }    
@@ -2447,6 +2460,45 @@ void DoNeo(uint8_t addr,uint8_t data){
        neoblue=data;
        break;
   }
+}
+
+
+void test_say(char * Sentance){
+    uint16_t x=0;
+    char c;
+    while((c=Sentance[x])!=0){
+        printf("%c",c);
+        x++;
+    }
+    printf("\n");
+    
+}
+
+void AddToSentance(char c){
+    if(c=='\n'){
+//        test_say(Sentance);
+//	printf("\nSay '%s'\n",Sentance);
+        uint16_t s=slen(Sentance);
+        Sentance[s++]=' ';
+        Sentance[s++]=' ';
+        Sentance[s++]=' ';
+        Sentance[s]=0;
+        sayWBW(Sentance);
+//        PrintOutput();
+//        printf(" - after say , starting speak\n");
+        SentPos=0;
+	Sentance[0]=' ';
+	Sentance[1]=0;        
+	speakPos=0;        
+        speak=1;
+        
+    }else{
+        Sentance[SentPos]=c;
+        SentPos++;
+        Sentance[SentPos]=0;
+    
+    }
+
 }
 
 
@@ -2475,21 +2527,52 @@ void Core1Main(void){
     sleep_ms(500);
 
     while(1){
+      //Send raw Allophone data
       if(SPO256DataReady>0){
           PlayAllophone(SPO256DataOut);
           SPO256DataReady=0;
       }
+      
+      //Send beep frequencies
       if(BeepDataReady>0){
           Beep(BeepDataOut);
           BeepDataReady=0;
-      }    
+      }
+          
+      //Send data for Neo Pixels
       if(NeoPortDataReady>0){
           DoNeo(NeoPortAddr,NeoPortData);
           NeoPortDataReady=0;
       }
-      //playdisk sounds triggered from sd card LED 
+
+      //Playdisk sounds triggered from sd card LED 
       if(playing_disk){
         PlayDiskSounds();
+      }
+      
+      //Data to Sentance to be encoded to allophones
+      if(CTS256DataReady>0){
+          // add to sentance buffer
+          AddToSentance(CTS256DataOut);
+          CTS256DataReady=0;
+      }
+      
+      //If speak is triggered after a sentance encoded to allophones
+      if(speak>0){
+         if(output[speakPos]==0){
+            speak=0;
+            speakPos=0;
+            output[0]=0;
+//            printf("\nSpeak Ended\n");
+         }else{   
+            char c =output[speakPos];
+            if (c==64){c=0;}
+            PlayAllophone(c);
+
+//            printf("%02X ",c);
+
+            speakPos++;
+         }   
       }
       
 #ifdef WithDisplay
@@ -2668,6 +2751,7 @@ void main(void)
 
 	  SPO256Port = iniparser_getint(ini, "PORT:spo256",SPO256Port );
 	  SPO256FreqPort = iniparser_getint(ini, "PORT:spo256freq",SPO256FreqPort );
+	  CTS256Port = iniparser_getint(ini, "PORT:cts256",CTS256Port );
 	  BeepPort = iniparser_getint(ini, "PORT:beep",BeepPort );
 	  NeoPixelPort = iniparser_getint(ini,"PORT:Neo", NeoPixelPort);
 #ifdef WithDisplay
@@ -2757,6 +2841,12 @@ sprintf(RomTitle, "\n\r    | | | | | |  ___| | | | | | | |   ");PrintToSelected(
 sprintf(RomTitle, "\n\r    |_| |_| |_| (_____/ |_| |_| |_|   ");PrintToSelected(RomTitle,0);                            
 sprintf(RomTitle, "\n\r    ");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r   ___________________________________ ");PrintToSelected(RomTitle,0);
+#ifdef WithDisplay
+sprintf(RomTitle, "\n\r  |        _________________          |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |       | RomWBW          |         |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |       | Ready           |         |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |       |_________________|         |");PrintToSelected(RomTitle,0);
+#endif
 sprintf(RomTitle, "\n\r  |  __    __    __      __           |");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r  | |__|  |__|  |__|    |__|          |");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r  |                                   |");PrintToSelected(RomTitle,0);
@@ -2764,7 +2854,7 @@ sprintf(RomTitle, "\n\r  |        PICO ROMWBW on %s      |",chip);PrintToSelecte
 sprintf(RomTitle, "\n\r  |         Derek Woodroffe           |");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r  |           Extreme Kits            |");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r  |     Kits at extkits.uk/ROMWBW     |");PrintToSelected(RomTitle,0);
-sprintf(RomTitle, "\n\r  |  _______      2025                |");PrintToSelected(RomTitle,0);
+sprintf(RomTitle, "\n\r  |  _______      2026                |");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r  | |_______|        eXtkits    WBW   |");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r _|___________________________________|_");PrintToSelected(RomTitle,0);
 sprintf(RomTitle, "\n\r|_______________________________________| \n\r\n\r");PrintToSelected(RomTitle,0);
