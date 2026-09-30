@@ -15,7 +15,7 @@
 
 //define to add display
 //undefine to remove display also moves usb/uart switch to GPIO12
-#define WithDisplay 0
+//#define WithDisplay 1
 
 //define for Pico II
 #ifdef PICO_RP2350
@@ -64,9 +64,7 @@
 #include "malloc.h"
 
 #include "CTS256_AL2.c"
-//#include "rules_array.c"
 
-//#define FFS True
 
 //ide file handles
 FIL fili;
@@ -108,25 +106,33 @@ uint PWMslice;
 uint8_t SPO256Port=0x28;
 uint8_t SPO256FreqPort=0x2a;
 uint8_t CTS256Port=0x2b;
+
 //set to pipe stdio to CTS
 uint8_t CTS_out=0; 
+
 //SPO Data flags
 volatile static uint8_t SPO256DataOut;
 volatile static uint8_t SPO256DataReady=0;
-//volatile static uint8_t SPO256FreqPortData=90;
 volatile static uint8_t SPO256FreqPortData=91;
 volatile static uint8_t CTS256DataOut;
+
 //CTS sentance size
 #define SENTANCEMAX  1024
 void AddToSentance(char c);
 void AddStringToSentance(char * string);
+
 //CTS Data Flags
 volatile static uint8_t CTS256DataReady=0;
 char Sentance[SENTANCEMAX]={' ',0};
 volatile static uint16_t  SentPos=0;
-//allophone buffer
+
+//allophone Circularbuffer
+#define ALLOCBUFFMAX 4096
+uint8_t AlloCBuffer[ALLOCBUFFMAX];
 volatile static uint16_t allophoneIn=0;
 volatile static uint16_t allophoneOut=0;
+
+
 
 //Beep
 #include "midiNotes.h"
@@ -142,7 +148,15 @@ volatile static uint8_t BeepDataReady=0;
 uint8_t GetNeoData(uint8_t addr);
 
 #define NUM_PIXELS 128
+
+#ifndef RCROMWBW 
 #define PIXEL_PIN 22
+#endif
+
+#ifdef RCROMWBW
+#define PIXEL_PIN 28
+#endif
+
 //True for RGBW , False for RGB Neopixels
 #define RGBW 0
 
@@ -191,18 +205,6 @@ int UseUsb=3;
 //IDE
 static int ide =1; //set to 1 to init IDE
 struct ide_controller *ide0;
-
-/* Real UART setup*/
-#define UART_ID uart0
-#define BAUD_RATE 115200
-#define DATA_BITS 8
-#define STOP_BITS 1
-#define PARITY    UART_PARITY_NONE
-
-// We are using pins 0 and 1, but see the GPIO function select table in the
-// datasheet for information on which other pins can be used.
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
 
 char usbcharbuf=0;
 int hasusbcharwaiting=0;
@@ -324,7 +326,7 @@ static uint8_t fast = 0;
 static uint8_t int_recalc = 0;
 
 //Emulaton speed tweaks.
-static uint16_t tstate_steps = 500;
+static uint16_t tstate_steps = 500; /* RC2014 core v peritherals - higher z80 - lower pepherals  */
 //300 better for speed (core). 20 better for IO
 #define IOMAX 20
 #define IOMIN 400
@@ -1337,6 +1339,7 @@ static uint8_t PIOA_read(void){
 //       gpio_disable_pulls(PIOAp[a]);
        v=v << 1;
     }
+    //printf("PIOA %i\n",v);
     return r;
 
 }
@@ -1547,10 +1550,14 @@ uint8_t  DisplayRead(uint8_t isdata){
 
 static uint8_t io_read_2014(uint16_t addr)
 {
+        
+
 	if (trace & TRACE_IO) printf( "read %02x\n", addr);
 	if ((addr & 0xFF) == 0xBA) return 0xCC;
 
 	addr &= 0xFF;
+
+//	if(addr==0){printf("a0\n");}
 
 	if ((addr >= 0xA0 && addr <= 0xA7) && acia && acia_narrow == 1)
 		return acia_read(acia, addr & 1);
@@ -1568,7 +1575,6 @@ static uint8_t io_read_2014(uint16_t addr)
 	else if (addr == SPO256Port)  return SPO256DataReady;
 	else if (addr == SPO256FreqPort) return SPO256FreqPortData; 
 	else if (addr == CTS256Port)  return CTS256DataReady;
-
 	else if (addr == BeepPort) return BeepDataReady;
         else if (addr >= NeoPixelPort && addr <= NeoPixelPort+7) return GetNeoData(addr-NeoPixelPort);
 #ifdef WithDisplay
@@ -2332,25 +2338,24 @@ void DoNeo(uint8_t addr,uint8_t data){
 //to PlayAllophone
 void DoAllophoneOut(){
     if(allophoneIn!=allophoneOut){
-        char c =AlloBuffer[allophoneOut];
+        char c =AlloCBuffer[allophoneOut];
 //        printf("~%i",c);
         allophoneOut++;
-        if(allophoneOut>ALLOBUFFERMAX)allophoneOut=0;
+        if(allophoneOut>ALLOCBUFFMAX)allophoneOut=0;
         PlayAllophone(c);
     }
 }
 
 //Add allophone as char, to Circular buffer
-//
 void DoAllophoneIn(char c){
 //    printf("^%i",c);
-    AlloBuffer[allophoneIn]=c;
+    AlloCBuffer[allophoneIn]=c;
     allophoneIn++;
-    if(allophoneIn>ALLOBUFFERMAX)allophoneIn=0;
+    if(allophoneIn>ALLOCBUFFMAX)allophoneIn=0;
 }
 
 //add char to CTS Sentance
-//calls sayWBW on '/n' Passes Allophones to Circular buffer 
+//calls sayWBW on '/n' which Passes Allophones to Circular buffer 
 void AddToSentance(char c){
     if(c=='\n'){
 //	printf("\nSay '%s'\n",Sentance);
@@ -2652,6 +2657,15 @@ void main(void)
 
 //########################################### End of INI Parser ###########################
 
+//init PIO
+//    printf("Init NEO-PIXELS PIN %i\n",PIXEL_PIN);
+//    sleep_ms(100);
+
+        if(PIOA<256){
+          PIOA_init();
+        }
+
+
 //Get switches and select UART from switches
         GetSwitches();	
 	
@@ -2682,13 +2696,16 @@ void main(void)
 	    }
        }
 
+
+
+
 //compiled time
 	printf("\n\rCompiled %s %s\n",__DATE__,__TIME__);
 
 // Output Decided on serial port so from here on Print only to that post
 
-//init PIO
-        if(PIOA<256) PIOA_init();
+
+
 
 //chip detect
      char chip[8]="??????";
